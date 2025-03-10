@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تنظیمات ترجمه توییت</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            direction: rtl;
+            text-align: right;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f8fa;
+            min-width: 300px;
+        }
+        h3 {
+            background-color: #749e00;
+            color: #fff;
+            margin: 0;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin: 15px;
+            padding: 20px;
+        }
+        p {
+            margin: 10px 0 20px 0;
+            font-size: 14px;
+            color: #444;
+        }
+        .language-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        label:hover {
+            background-color: #f0f7e6;
+        }
+        input[type="checkbox"] {
+            margin-left: 8px;
+            width: 16px;
+            height: 16px;
+            accent-color: #749e00;
+        }
+        .api-section label {
+            display: block;
+            margin-bottom: 8px;
+            color: #444;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            direction: ltr;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #749e00;
+        }
+        button {
+            display: block;
+            width: 100%;
+            margin: 20px auto 10px auto;
+            padding: 12px;
+            font-size: 14px;
+            background-color: #749e00;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
+        }
+        button:hover {
+            background-color: #5c7b00;
+        }
+        #status {
+            text-align: center;
+            color: #749e00;
+            font-size: 13px;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f0f7e6;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h3>تنظیمات ترجمه</h3>
+    <div class="container">
+        <form id="language-form">
+            <div class="api-section">
+                <label>API Key جمینی:</label>
+                <input type="text" id="api-key" placeholder="Enter your Gemini API key here">
+            </div>
+            
+            <div class="api-section">
+                <label>دستور ترجمه:</label>
+                <textarea id="translation-prompt" 
+                    style="width: 100%; 
+                           padding: 8px 12px; 
+                           border: 2px solid #e1e8ed; 
+                           border-radius: 6px; 
+                           font-size: 13px; 
+                           direction: ltr; 
+                           resize: vertical; 
+                           font-family: inherit;
+                           min-height: 100px;
+                           max-height: 200px;
+                           box-sizing: border-box;
+                           margin-bottom: 10px;
+                           line-height: 1.4;
+                           overflow-y: auto;">
+                </textarea>
+            </div>
+            
+            <button type="button" id="save-settings">ذخیره تنظیمات</button>
+        </form>
+        <p id="status" style="display: none;">تنظیمات با موفقیت ذخیره شد! ✓</p>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "EV Translator AI",
-  "version": "0.1",
+  "version": "0.2",
   "description": "A Chrome extension to translate any text and tweets to any language (Persian by default) using Gemini AI.",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "icons": {
     "16": "icon.png",

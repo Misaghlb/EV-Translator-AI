@@ -107,41 +107,55 @@
             background-color: #f0f7e6;
             border-radius: 4px;
         }
+        .feature-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .feature-description {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        .new-badge {
+            display: inline-block;
+            background-color: #ff6b6b;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-right: 5px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h3>تنظیمات ترجمه</h3>
+    
     <div class="container">
-        <form id="language-form">
-            <div class="api-section">
-                <label>API Key جمینی:</label>
-                <input type="text" id="api-key" placeholder="Enter your Gemini API key here">
-            </div>
-            
-            <div class="api-section">
-                <label>دستور ترجمه:</label>
-                <textarea id="translation-prompt" 
-                    style="width: 100%; 
-                           padding: 8px 12px; 
-                           border: 2px solid #e1e8ed; 
-                           border-radius: 6px; 
-                           font-size: 13px; 
-                           direction: ltr; 
-                           resize: vertical; 
-                           font-family: inherit;
-                           min-height: 100px;
-                           max-height: 200px;
-                           box-sizing: border-box;
-                           margin-bottom: 10px;
-                           line-height: 1.4;
-                           overflow-y: auto;">
-                </textarea>
-            </div>
-            
-            <button type="button" id="save-settings">ذخیره تنظیمات</button>
-        </form>
-        <p id="status" style="display: none;">تنظیمات با موفقیت ذخیره شد! ✓</p>
+        <p>برای استفاده از این افزونه، لطفاً API Key جمینای خود را وارد کنید. همچنین می‌توانید دستور ترجمه را سفارشی کنید.</p>
+        
+        <label for="api-key">API Key جمینای:</label>
+        <input type="text" id="api-key" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        
+        <label for="translation-prompt">دستور ترجمه:</label>
+        <textarea id="translation-prompt" style="width: 100%; height: 150px; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 13px; resize: vertical;"></textarea>
+        
+        <button id="save-settings" style="background-color: #749e00; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;">ذخیره تنظیمات</button>
+        
+        <div id="status" style="display: none; text-align: center; margin-top: 10px; padding: 8px; background-color: #e8f5e9; color: #2e7d32; border-radius: 4px;">تنظیمات با موفقیت ذخیره شد!</div>
+        
     </div>
+    
     <script src="popup.js"></script>
 </body>
 </html>

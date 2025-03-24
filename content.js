@@ -122,7 +122,10 @@ function displayTranslation(translation) {
     const translationBox = createOrUpdateTranslationBox();
     const translationContent = document.createElement('div');
     translationContent.className = 'translation-content';
-    translationContent.textContent = translation;
+    
+    // Replace newline characters with <br> tags to preserve paragraph formatting
+    const formattedTranslation = translation.replace(/\n/g, '<br>');
+    translationContent.innerHTML = formattedTranslation;
     
     if (!document.getElementById('translation-box')) {
         translationBox.appendChild(createCloseButton());
@@ -428,7 +431,9 @@ async function performTranslation(tweet, textContent, lang, button) {
             
             // Create a container for the translation text
             const translationText = document.createElement('div');
-            translationText.textContent = translation;
+            // Replace newline characters with <br> tags to preserve paragraph formatting
+            const formattedTranslation = translation.replace(/\n/g, '<br>');
+            translationText.innerHTML = formattedTranslation;
             translationBox.appendChild(translationText);
             
             // Add re-translate button
@@ -452,7 +457,9 @@ async function performTranslation(tweet, textContent, lang, button) {
                     translationCache.delete(textContent);
                     const newTranslation = await translateText(textContent);
                     if (newTranslation) {
-                        translationText.textContent = newTranslation;
+                        // Replace newline characters with <br> tags for updated translation
+                        const formattedNewTranslation = newTranslation.replace(/\n/g, '<br>');
+                        translationText.innerHTML = formattedNewTranslation;
                     }
                 } catch (error) {
                     console.error('خطا در بازترجمه:', error);

@@ -4,6 +4,13 @@ let selectionTimer = null;
 const SELECTION_DELAY = 300; // ms
 let lastSelectedText = ''; // Store the last selected text
 
+// Store the last position of the translation box
+let lastTranslationBoxPosition = {
+    top: null,
+    left: null,
+    positionSet: false
+};
+
 // Track mouse down state
 document.addEventListener('mousedown', function(event) {
     // Don't remove the button if clicking on it
@@ -119,7 +126,97 @@ async function performSelectionTranslation(selectedText) {
 
 // Function to display translation in a new box
 function displayTranslation(translation) {
-    const translationBox = createOrUpdateTranslationBox();
+    // Check if there's already a translation box
+    const existingBox = document.getElementById('translation-box');
+    
+    // Create a new floating tooltip-style box or reuse existing one
+    let translationBox;
+    if (existingBox) {
+        translationBox = existingBox;
+        // Clear existing content
+        while (translationBox.firstChild) {
+            translationBox.removeChild(translationBox.firstChild);
+        }
+    } else {
+        translationBox = document.createElement('div');
+        translationBox.id = 'translation-box';
+        
+        // Set position to fixed so it doesn't affect document flow
+        Object.assign(translationBox.style, {
+            position: 'fixed',
+            zIndex: '999999',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            padding: '16px',
+            maxHeight: '80vh',
+            width: '700px',
+            maxWidth: '90vw',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            direction: 'rtl',
+            fontFamily: 'Tahoma, Arial, sans-serif',
+            fontSize: '18px',
+            lineHeight: '1.8',
+            color: '#333'
+        });
+        
+        // Add styles for scrollbar and content if not already added
+        if (!document.getElementById('translation-box-styles')) {
+            const style = document.createElement('style');
+            style.id = 'translation-box-styles';
+            style.textContent = `
+                #translation-box::-webkit-scrollbar {
+                    width: 8px !important;
+                }
+                #translation-box::-webkit-scrollbar-thumb {
+                    background-color: #ccc !important;
+                    border-radius: 4px !important;
+                }
+                
+                #translation-box .translation-content {
+                    font-family: Tahoma, Arial, sans-serif !important;
+                    line-height: 1.8 !important;
+                    color: #333 !important;
+                    font-size: 18px !important;
+                    text-align: right !important;
+                    direction: rtl !important;
+                    margin-top: 8px !important;
+                    white-space: pre-wrap !important;
+                    word-wrap: break-word !important;
+                }
+                
+                #translation-box .translation-close-btn {
+                    position: absolute !important;
+                    top: 8px !important;
+                    left: 8px !important;
+                    background: none !important;
+                    border: none !important;
+                    font-size: 24px !important;
+                    color: #666 !important;
+                    cursor: pointer !important;
+                    padding: 4px 8px !important;
+                    border-radius: 4px !important;
+                }
+                
+                #translation-box .translation-close-btn:hover {
+                    background-color: #f5f5f5 !important;
+                }
+                
+                @keyframes translationBoxFadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                
+                #translation-box {
+                    animation: translationBoxFadeIn 0.2s ease-out !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    // Create translation content
     const translationContent = document.createElement('div');
     translationContent.className = 'translation-content';
     
@@ -127,17 +224,55 @@ function displayTranslation(translation) {
     const formattedTranslation = translation.replace(/\n/g, '<br>');
     translationContent.innerHTML = formattedTranslation;
     
-    if (!document.getElementById('translation-box')) {
-        translationBox.appendChild(createCloseButton());
-        translationBox.appendChild(translationContent);
+    // Add close button
+    const closeButton = createCloseButton();
+    translationBox.appendChild(closeButton);
+    translationBox.appendChild(translationContent);
+    
+    // Add to the page if it's not already there
+    if (!document.body.contains(translationBox)) {
         document.body.appendChild(translationBox);
-        addTranslationBoxEventListeners(translationBox);
-        requestAnimationFrame(() => adjustTranslationBoxPosition(translationBox));
-    } else {
-        const existingContent = translationBox.querySelector('.translation-content');
-        existingContent.replaceWith(translationContent);
-        adjustTranslationBoxPosition(translationBox);
     }
+    
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Get box dimensions
+    const boxRect = translationBox.getBoundingClientRect();
+    
+    // Use last position if available, otherwise center the box
+    let top, left;
+    
+    if (lastTranslationBoxPosition.positionSet) {
+        // Use the last position
+        top = lastTranslationBoxPosition.top;
+        left = lastTranslationBoxPosition.left;
+    } else {
+        // Center the box in the viewport
+        top = (viewportHeight - boxRect.height) / 2;
+        left = (viewportWidth - boxRect.width) / 2;
+    }
+    
+    // Make sure it doesn't go off-screen
+    if (left < 10) left = 10;
+    if (top < 10) top = 10;
+    if (left + boxRect.width > viewportWidth - 10) {
+        left = viewportWidth - boxRect.width - 10;
+    }
+    if (top + boxRect.height > viewportHeight - 10) {
+        top = viewportHeight - boxRect.height - 10;
+    }
+    
+    // Apply the position
+    translationBox.style.top = `${top}px`;
+    translationBox.style.left = `${left}px`;
+    
+    // Make the box draggable and update position when dragged
+    makeDraggable(translationBox, true);
+    
+    // Add event listeners
+    addTranslationBoxEventListeners(translationBox);
 }
 
 // Helper function to create or get existing translation box
@@ -287,7 +422,7 @@ function adjustTranslationBoxPosition(translationBox) {
 }
 
 // Helper function to make element draggable
-function makeDraggable(element) {
+function makeDraggable(element, savePosition = false) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     element.style.cursor = 'move';
     
@@ -323,6 +458,13 @@ function makeDraggable(element) {
     function closeDragElement() {
         document.onmouseup = null;
         document.onmousemove = null;
+        
+        // Save the position for future boxes if requested
+        if (savePosition) {
+            lastTranslationBoxPosition.top = parseInt(element.style.top);
+            lastTranslationBoxPosition.left = parseInt(element.style.left);
+            lastTranslationBoxPosition.positionSet = true;
+        }
     }
 }
 
@@ -395,46 +537,70 @@ Translate the above text into Persian.`;
 }
 
 async function performTranslation(tweet, textContent, lang, button) {
+    // Store original text to restore it later
+    const originalText = button.textContent;
     button.disabled = true;
     button.textContent = 'در حال ترجمه...';
 
     try {
         const translation = await translateText(textContent);
         if (translation) {
-            const translationBox = document.createElement('div');
-            translationBox.style.marginTop = '10px';
-            translationBox.style.padding = '10px';
+            // Check if there's already a translation box
+            const existingBox = document.getElementById('translation-box');
             
-            // Check if Twitter is in dark mode by looking at the background color
-            const isDarkMode = document.documentElement.style.colorScheme === 'dark' || 
-                               window.matchMedia('(prefers-color-scheme: dark)').matches ||
-                               document.body.classList.contains('dark') ||
-                               getComputedStyle(document.body).backgroundColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)/)?.[1] < 50;
-            
-            // Apply Twitter-like styling based on theme
-            if (isDarkMode) {
-                translationBox.style.backgroundColor = '#2f3336';
-                translationBox.style.color = '#e7e9ea';
-                translationBox.style.border = '1px solid #38444d';
+            // Create a new floating tooltip-style box or reuse existing one
+            let translationBox;
+            if (existingBox) {
+                translationBox = existingBox;
+                // Clear existing content
+                while (translationBox.firstChild) {
+                    translationBox.removeChild(translationBox.firstChild);
+                }
             } else {
-                translationBox.style.backgroundColor = '#f7f9f9';
-                translationBox.style.color = '#0f1419';
-                translationBox.style.border = '1px solid #eff3f4';
+                translationBox = document.createElement('div');
+                translationBox.id = 'translation-box';
+                
+                // Check if Twitter is in dark mode by looking at the background color
+                const isDarkMode = document.documentElement.style.colorScheme === 'dark' || 
+                                   window.matchMedia('(prefers-color-scheme: dark)').matches ||
+                                   document.body.classList.contains('dark') ||
+                                   getComputedStyle(document.body).backgroundColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)/)?.[1] < 50;
+                
+                // Apply Twitter-like styling based on theme
+                if (isDarkMode) {
+                    translationBox.style.backgroundColor = '#2f3336';
+                    translationBox.style.color = '#e7e9ea';
+                    translationBox.style.border = '1px solid #38444d';
+                } else {
+                    translationBox.style.backgroundColor = '#f7f9f9';
+                    translationBox.style.color = '#0f1419';
+                    translationBox.style.border = '1px solid #eff3f4';
+                }
+                
+                // Set position to fixed so it doesn't affect document flow
+                Object.assign(translationBox.style, {
+                    position: 'fixed',
+                    zIndex: '999999',
+                    padding: '10px',
+                    borderRadius: '12px',
+                    textAlign: 'right',
+                    direction: 'rtl',
+                    fontSize: '15px',
+                    lineHeight: '1.5',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                    maxHeight: '80vh',
+                    width: '350px',
+                    maxWidth: '90vw',
+                    overflowY: 'auto'
+                });
             }
-            
-            translationBox.style.borderRadius = '12px';
-            translationBox.style.textAlign = 'right';
-            translationBox.style.direction = 'rtl';
-            translationBox.style.fontSize = '15px';
-            translationBox.style.lineHeight = '1.5';
-            translationBox.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
             
             // Create a container for the translation text
             const translationText = document.createElement('div');
             // Replace newline characters with <br> tags to preserve paragraph formatting
             const formattedTranslation = translation.replace(/\n/g, '<br>');
             translationText.innerHTML = formattedTranslation;
-            translationBox.appendChild(translationText);
             
             // Add re-translate button
             const retranslateButton = document.createElement('button');
@@ -470,8 +636,92 @@ async function performTranslation(tweet, textContent, lang, button) {
                 }
             });
             
+            // Add close button
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '×';
+            closeButton.style.position = 'absolute';
+            closeButton.style.top = '8px';
+            closeButton.style.left = '8px';
+            closeButton.style.background = 'none';
+            closeButton.style.border = 'none';
+            closeButton.style.fontSize = '20px';
+            closeButton.style.color = '#666';
+            closeButton.style.cursor = 'pointer';
+            closeButton.style.padding = '0 5px';
+            
+            closeButton.addEventListener('click', () => {
+                document.body.removeChild(translationBox);
+            });
+            
+            // Add elements to the box
+            translationBox.appendChild(closeButton);
+            translationBox.appendChild(translationText);
             translationBox.appendChild(retranslateButton);
-            tweet.insertAdjacentElement('afterend', translationBox);
+            
+            // Add to the page if it's not already there
+            if (!document.body.contains(translationBox)) {
+                document.body.appendChild(translationBox);
+            }
+            
+            // Get viewport dimensions
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Get box dimensions
+            const boxRect = translationBox.getBoundingClientRect();
+            
+            // Use last position if available, otherwise center the box
+            let top, left;
+            
+            if (lastTranslationBoxPosition.positionSet) {
+                // Use the last position
+                top = lastTranslationBoxPosition.top;
+                left = lastTranslationBoxPosition.left;
+            } else {
+                // Center the box in the viewport
+                top = (viewportHeight - boxRect.height) / 2;
+                left = (viewportWidth - boxRect.width) / 2;
+            }
+            
+            // Make sure it doesn't go off-screen
+            if (left < 10) left = 10;
+            if (top < 10) top = 10;
+            if (left + boxRect.width > viewportWidth - 10) {
+                left = viewportWidth - boxRect.width - 10;
+            }
+            if (top + boxRect.height > viewportHeight - 10) {
+                top = viewportHeight - boxRect.height - 10;
+            }
+            
+            // Apply the position
+            translationBox.style.top = `${top}px`;
+            translationBox.style.left = `${left}px`;
+            
+            // Make the box draggable and update position when dragged
+            makeDraggable(translationBox, true);
+            
+            // Add event listener to close on Escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape' && document.body.contains(translationBox)) {
+                    document.body.removeChild(translationBox);
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            
+            // Add event listener to close when clicking outside
+            const clickOutsideHandler = (e) => {
+                if (!translationBox.contains(e.target) && e.target !== button) {
+                    if (document.body.contains(translationBox)) {
+                        document.body.removeChild(translationBox);
+                        document.removeEventListener('click', clickOutsideHandler);
+                    }
+                }
+            };
+            // Delay adding the click handler to prevent immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', clickOutsideHandler);
+            }, 100);
         } else {
             alert('خطا در ترجمه.');
         }
@@ -480,7 +730,7 @@ async function performTranslation(tweet, textContent, lang, button) {
         alert('خطا در ترجمه.');
     } finally {
         button.disabled = false;
-        button.textContent = 'ترجمه توییت';
+        button.textContent = originalText; // Restore the original button text
     }
 }
 
@@ -502,18 +752,40 @@ async function addTranslateButtons() {
     for (const tweet of tweets) {
         if (tweet.dataset.buttonAdded) continue;
         tweet.dataset.buttonAdded = true;
-
+        
+        // Try to find the timestamp element to position our button near it
+        let timestampEl = tweet.closest('article')?.querySelector('time');
+        let tweetActionsEl = tweet.closest('article')?.querySelector('[role="group"]');
+        
+        // Create the button
         const button = document.createElement('button');
-        button.textContent = 'ترجمه توییت';
+        button.textContent = 'ترجمه'; // Just "ترجمه" as requested
         button.className = 'translate-button';
-        button.style.marginTop = '10px';
-        button.style.padding = '5px 10px';
-        button.style.backgroundColor = '#749e00';
-        button.style.color = 'white';
-        button.style.border = 'none';
-        button.style.borderRadius = '5px';
+        button.style.display = 'inline-flex';
+        button.style.alignItems = 'center';
+        button.style.justifyContent = 'center';
+        button.style.padding = '3px 8px';
+        button.style.fontSize = '12px';
+        button.style.backgroundColor = 'transparent';
+        button.style.color = '#1d9bf0'; // Twitter blue
+        button.style.border = '1px solid #1d9bf0';
+        button.style.borderRadius = '14px';
         button.style.cursor = 'pointer';
         button.style.textAlign = 'right';
+        button.style.marginLeft = '6px';
+        button.style.lineHeight = '1';
+        
+        // Add hover effect
+        button.addEventListener('mouseover', () => {
+            button.style.backgroundColor = 'rgba(29, 155, 240, 0.1)';
+        });
+        
+        button.addEventListener('mouseout', () => {
+            button.style.backgroundColor = 'transparent';
+        });
+        
+        // Add a data attribute to the tweet
+        tweet.dataset.tweetIndex = tweet.dataset.tweetIndex || Math.random().toString(36).substring(2, 9);
 
         button.addEventListener('click', async (event) => {
             event.stopPropagation();
@@ -521,8 +793,39 @@ async function addTranslateButtons() {
             const lang = tweet.getAttribute('lang');
             await performTranslation(tweet, textContent, lang, button);
         });
-
-        tweet.insertAdjacentElement('afterend', button);
+        
+        // Add event listeners to prevent event propagation
+        button.addEventListener('mousedown', (e) => e.stopPropagation());
+        button.addEventListener('mouseup', (e) => e.stopPropagation());
+        button.addEventListener('touchstart', (e) => e.stopPropagation());
+        button.addEventListener('touchend', (e) => e.stopPropagation());
+        
+        // Create a container for the button that prevents event bubbling
+        const container = document.createElement('div');
+        container.style.display = 'inline-flex';
+        container.appendChild(button);
+        
+        // Stop propagation on the container too
+        container.addEventListener('click', (e) => e.stopPropagation());
+        container.addEventListener('mousedown', (e) => e.stopPropagation());
+        container.addEventListener('mouseup', (e) => e.stopPropagation());
+        
+        // Insert the button in a suitable location
+        if (tweetActionsEl) {
+            // Place with tweet actions to avoid link conflicts
+            tweetActionsEl.insertBefore(container, tweetActionsEl.firstChild);
+        } else {
+            // Fallback: append to the tweet in an unobtrusive way
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.justifyContent = 'flex-start';
+            container.style.marginTop = '4px';
+            container.appendChild(button);
+            
+            // Find a good place to insert it
+            const contentContainer = tweet.closest('article')?.querySelector('[data-testid="tweetText"]') || tweet;
+            contentContainer.parentNode.insertBefore(container, contentContainer.nextSibling);
+        }
     }
 }
 

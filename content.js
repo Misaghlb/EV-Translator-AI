@@ -746,35 +746,82 @@ async function addTranslateButtons() {
         return;
     }
 
-    // Look for tweets specifically by targeting article elements containing non-Persian text
-    const tweets = document.querySelectorAll('article div[dir="auto"]:not([lang="fa"])');
+    // Only add the translate button to the main tweet text, not quoted/embedded tweets
+    const tweets = Array.from(document.querySelectorAll('article')).map(article => {
+        // Find all div[dir="auto"] inside this article, but only those that are not inside another article (quoted tweets)
+        // Also, only select the first matching div[dir="auto"] that is not Persian
+        const candidates = Array.from(article.querySelectorAll('div[dir="auto"]:not([lang="fa"])'));
+        // Exclude divs that are inside a quoted tweet (which are nested articles)
+        const mainCandidates = candidates.filter(div => !div.closest('article article'));
+        // Only pick the first one, which is the main tweet text
+        return mainCandidates[0];
+    }).filter(Boolean);
 
     for (const tweet of tweets) {
-        if (tweet.dataset.buttonAdded) continue;
-        tweet.dataset.buttonAdded = true;
-        
+        // Find the tweet action bar
+        let tweetActionsEl = tweet.closest('article')?.querySelector('[role="group"]');
+        if (!tweetActionsEl) continue;
+
+        // Prevent duplicate: check if a translate button already exists in this action bar
+        if (tweetActionsEl.querySelector('.translate-button')) continue;
+
         // Try to find the timestamp element to position our button near it
         let timestampEl = tweet.closest('article')?.querySelector('time');
-        let tweetActionsEl = tweet.closest('article')?.querySelector('[role="group"]');
         
-        // Create the button
+        // Create the button with a more button-like appearance
         const button = document.createElement('button');
-        button.textContent = 'ترجمه'; // Just "ترجمه" as requested
         button.className = 'translate-button';
         button.style.display = 'inline-flex';
         button.style.alignItems = 'center';
         button.style.justifyContent = 'center';
-        button.style.padding = '3px 8px';
-        button.style.fontSize = '12px';
         button.style.backgroundColor = 'transparent';
         button.style.color = '#1d9bf0'; // Twitter blue
-        button.style.border = '1px solid #1d9bf0';
-        button.style.borderRadius = '14px';
+        button.style.border = '1px solid #1d9bf0'; // Add border back for button-like appearance
+        button.style.borderRadius = '4px';
         button.style.cursor = 'pointer';
-        button.style.textAlign = 'right';
-        button.style.marginLeft = '6px';
+        button.style.textAlign = 'center';
         button.style.lineHeight = '1';
-        
+        button.style.transition = 'all 0.2s';
+        button.style.margin = '0 4px 0 0';
+        button.style.padding = '1px 4px';
+        button.style.height = '18px';
+        button.style.fontSize = '11px';
+        button.style.fontWeight = 'bold';
+
+        // Responsive: icon-only and compact on small screens
+        function setButtonStyle() {
+            if (window.innerWidth < 600) {
+                // Icon only: Use bold T for Translate
+                button.innerHTML = '<span style="font-weight:bold;font-size:11px;line-height:1;color:#1d9bf0;">T</span>';
+                button.title = 'ترجمه';
+                button.style.padding = '1px 4px';
+                button.style.margin = '0 4px 0 0';
+                button.style.fontSize = '0px'; // Hide text
+                button.style.width = '16px';
+                button.style.height = '16px';
+                button.style.border = '1px solid #1d9bf0';
+                button.style.borderRadius = '4px';
+                button.style.display = 'inline-flex';
+                button.style.alignItems = 'center';
+                button.style.justifyContent = 'center';
+            } else {
+                button.innerHTML = 'ترجمه';
+                button.title = 'ترجمه';
+                button.style.padding = '1px 4px';
+                button.style.margin = '0 4px 0 0';
+                button.style.fontSize = '11px';
+                button.style.fontWeight = 'bold';
+                button.style.height = '18px';
+                button.style.width = 'auto';
+                button.style.border = '1px solid #1d9bf0';
+                button.style.borderRadius = '4px';
+                button.style.display = 'inline-flex';
+                button.style.alignItems = 'center';
+                button.style.justifyContent = 'center';
+            }
+        }
+        setButtonStyle();
+        window.addEventListener('resize', setButtonStyle);
         // Add hover effect
         button.addEventListener('mouseover', () => {
             button.style.backgroundColor = 'rgba(29, 155, 240, 0.1)';
@@ -789,9 +836,23 @@ async function addTranslateButtons() {
 
         button.addEventListener('click', async (event) => {
             event.stopPropagation();
-            const textContent = tweet.textContent.trim();
+            
+            // Find the specific tweet text element to avoid capturing UI elements
+            const tweetTextEl = tweet.closest('article').querySelector('[data-testid="tweetText"]');
+            let textContent = '';
+            
+            if (tweetTextEl) {
+                // Use the dedicated tweet text element if found
+                textContent = tweetTextEl.textContent.trim();
+            } else {
+                // Fallback to the tweet element but try to avoid capturing UI text
+                textContent = tweet.textContent.trim();
+            }
+            
             const lang = tweet.getAttribute('lang');
             await performTranslation(tweet, textContent, lang, button);
+            // Restore button content after translation completes
+            setButtonStyle();
         });
         
         // Add event listeners to prevent event propagation
@@ -803,6 +864,9 @@ async function addTranslateButtons() {
         // Create a container for the button that prevents event bubbling
         const container = document.createElement('div');
         container.style.display = 'inline-flex';
+        container.style.alignItems = 'center'; // Center vertically
+        container.style.height = '100%'; // Match height of parent
+        container.style.justifyContent = 'center'; // Center horizontally
         container.appendChild(button);
         
         // Stop propagation on the container too
@@ -812,19 +876,31 @@ async function addTranslateButtons() {
         
         // Insert the button in a suitable location
         if (tweetActionsEl) {
+            // Create a wrapper div that matches Twitter's action button containers
+            const actionWrapper = document.createElement('div');
+            actionWrapper.className = 'translate-action-wrapper';
+            actionWrapper.style.display = 'flex';
+            actionWrapper.style.alignItems = 'center';
+            actionWrapper.style.height = '100%';
+            actionWrapper.style.marginRight = '4px';
+            
+            // Add the container to the wrapper
+            actionWrapper.appendChild(container);
+            
             // Place with tweet actions to avoid link conflicts
-            tweetActionsEl.insertBefore(container, tweetActionsEl.firstChild);
+            tweetActionsEl.insertBefore(actionWrapper, tweetActionsEl.firstChild);
         } else {
             // Fallback: append to the tweet in an unobtrusive way
-            const container = document.createElement('div');
-            container.style.display = 'flex';
-            container.style.justifyContent = 'flex-start';
-            container.style.marginTop = '4px';
-            container.appendChild(button);
+            const fallbackContainer = document.createElement('div');
+            fallbackContainer.style.display = 'flex';
+            fallbackContainer.style.alignItems = 'center';
+            fallbackContainer.style.justifyContent = 'flex-start';
+            fallbackContainer.style.marginTop = '4px';
+            fallbackContainer.appendChild(button);
             
             // Find a good place to insert it
             const contentContainer = tweet.closest('article')?.querySelector('[data-testid="tweetText"]') || tweet;
-            contentContainer.parentNode.insertBefore(container, contentContainer.nextSibling);
+            contentContainer.parentNode.insertBefore(fallbackContainer, contentContainer.nextSibling);
         }
     }
 }

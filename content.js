@@ -117,7 +117,7 @@ async function performSelectionTranslation(selectedText) {
         let translation = await translateText(selectedText);
         hideLoadingIndicator();
         if (translation) {
-                displayTranslation(translation);
+                displayTranslation(translation, selectedText);
         } else {
             alert('Translation failed.');
         }
@@ -125,7 +125,7 @@ async function performSelectionTranslation(selectedText) {
 }
 
 // Function to display translation in a new box
-function displayTranslation(translation) {
+function displayTranslation(translation, originalText = null) {
     // Check if there's already a translation box
     const existingBox = document.getElementById('translation-box');
     
@@ -138,96 +138,127 @@ function displayTranslation(translation) {
             translationBox.removeChild(translationBox.firstChild);
         }
     } else {
-        translationBox = document.createElement('div');
-        translationBox.id = 'translation-box';
-        
-        // Set position to fixed so it doesn't affect document flow
-        Object.assign(translationBox.style, {
-            position: 'fixed',
-            zIndex: '999999',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            padding: '16px',
-            maxHeight: '80vh',
-            width: '700px',
-            maxWidth: '90vw',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            direction: 'rtl',
-            fontFamily: 'Tahoma, Arial, sans-serif',
-            fontSize: '18px',
-            lineHeight: '1.8',
-            color: '#333'
-        });
-        
-        // Add styles for scrollbar and content if not already added
-        if (!document.getElementById('translation-box-styles')) {
-            const style = document.createElement('style');
-            style.id = 'translation-box-styles';
-            style.textContent = `
-                #translation-box::-webkit-scrollbar {
-                    width: 8px !important;
-                }
-                #translation-box::-webkit-scrollbar-thumb {
-                    background-color: #ccc !important;
-                    border-radius: 4px !important;
-                }
-                
-                #translation-box .translation-content {
-                    font-family: Tahoma, Arial, sans-serif !important;
-                    line-height: 1.8 !important;
-                    color: #333 !important;
-                    font-size: 18px !important;
-                    text-align: right !important;
-                    direction: rtl !important;
-                    margin-top: 8px !important;
-                    white-space: pre-wrap !important;
-                    word-wrap: break-word !important;
-                }
-                
-                #translation-box .translation-close-btn {
-                    position: absolute !important;
-                    top: 8px !important;
-                    left: 8px !important;
-                    background: none !important;
-                    border: none !important;
-                    font-size: 24px !important;
-                    color: #666 !important;
-                    cursor: pointer !important;
-                    padding: 4px 8px !important;
-                    border-radius: 4px !important;
-                }
-                
-                #translation-box .translation-close-btn:hover {
-                    background-color: #f5f5f5 !important;
-                }
-                
-                @keyframes translationBoxFadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                
-                #translation-box {
-                    animation: translationBoxFadeIn 0.2s ease-out !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
+        translationBox = getTranslationBoxElement();
     }
     
-    // Create translation content
-    const translationContent = document.createElement('div');
-    translationContent.className = 'translation-content';
-    
+    // Create a container for the translation text
+    const translationText = document.createElement('div');
     // Replace newline characters with <br> tags to preserve paragraph formatting
     const formattedTranslation = translation.replace(/\n/g, '<br>');
-    translationContent.innerHTML = formattedTranslation;
+    translationText.innerHTML = formattedTranslation;
+    
+    // Add re-translate button
+    const retranslateButton = document.createElement('button');
+    retranslateButton.textContent = 'بازترجمه';
+    retranslateButton.style.marginTop = '10px';
+    retranslateButton.style.padding = '5px 10px';
+    retranslateButton.style.backgroundColor = '#1d9bf0'; // Twitter blue color
+    retranslateButton.style.color = 'white';
+    retranslateButton.style.border = 'none';
+    retranslateButton.style.borderRadius = '5px';
+    retranslateButton.style.cursor = 'pointer';
+    retranslateButton.style.fontSize = '13px';
+    retranslateButton.style.fontFamily = 'Vazirmatn, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    
+    // Only enable retranslate button if we have the original text
+    if (originalText) {
+        retranslateButton.addEventListener('click', async () => {
+            retranslateButton.disabled = true;
+            retranslateButton.textContent = 'در حال ترجمه...';
+            
+            try {
+                // Clear translation cache for this text to get a fresh translation
+                translationCache.delete(originalText);
+                const newTranslation = await translateText(originalText);
+                if (newTranslation) {
+                    // Replace newline characters with <br> tags for updated translation
+                    const formattedNewTranslation = newTranslation.replace(/\n/g, '<br>');
+                    translationText.innerHTML = formattedNewTranslation;
+                }
+            } catch (error) {
+                console.error('خطا در بازترجمه:', error);
+                alert('خطا در بازترجمه.');
+            } finally {
+                retranslateButton.disabled = false;
+                retranslateButton.textContent = 'بازترجمه';
+            }
+        });
+    } else {
+        retranslateButton.disabled = true;
+        retranslateButton.style.opacity = '0.5';
+        retranslateButton.title = 'Original text not available for retranslation';
+    }
     
     // Add close button
-    const closeButton = createCloseButton();
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '×';
+    closeButton.className = 'translation-close-btn';
+    
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(translationBox);
+    });
+    
+    // Add copy button
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'کپی';
+    copyButton.style.marginTop = '10px';
+    copyButton.style.marginRight = '10px';
+    copyButton.style.padding = '5px 10px';
+    copyButton.style.backgroundColor = '#1d9bf0'; // Twitter blue color
+    copyButton.style.color = 'white';
+    copyButton.style.border = 'none';
+    copyButton.style.borderRadius = '5px';
+    copyButton.style.cursor = 'pointer';
+    copyButton.style.fontSize = '13px';
+    copyButton.style.fontFamily = 'Vazirmatn, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    
+    copyButton.addEventListener('click', () => {
+        // Get all text content from the translation box except for buttons
+        let textToCopy = '';
+        const walker = document.createTreeWalker(translationBox, NodeFilter.SHOW_TEXT, {
+            acceptNode: function(node) {
+                // Exclude text nodes that are children of buttons
+                return (node.parentNode && node.parentNode.tagName === 'BUTTON') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        let node;
+        while (node = walker.nextNode()) {
+            textToCopy += node.textContent + '\n';
+        }
+        textToCopy = textToCopy.trim();
+        
+        // Use the Clipboard API to copy the text
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Provide visual feedback that text was copied
+            const originalText = copyButton.textContent;
+            copyButton.textContent = 'کپی شد!';
+            copyButton.style.backgroundColor = '#28a745'; // Green color for success
+            
+            // Reset button after a short delay
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+                copyButton.style.backgroundColor = '#1d9bf0';
+            }, 2000);
+        }).catch(err => {
+            console.error('خطا در کپی متن:', err);
+            alert('خطا در کپی متن.');
+        });
+    });
+    
+    // Create a container for the buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-start';
+    buttonContainer.style.width = '100%';
+    
+    // Add buttons to the container
+    buttonContainer.appendChild(retranslateButton);
+    buttonContainer.appendChild(copyButton);
+    
+    // Add elements to the box
     translationBox.appendChild(closeButton);
-    translationBox.appendChild(translationContent);
+    translationBox.appendChild(translationText);
+    translationBox.appendChild(buttonContainer);
     
     // Add to the page if it's not already there
     if (!document.body.contains(translationBox)) {
@@ -271,97 +302,46 @@ function displayTranslation(translation) {
     // Make the box draggable and update position when dragged
     makeDraggable(translationBox, true);
     
-    // Add event listeners
-    addTranslationBoxEventListeners(translationBox);
+    // Add event listener to close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape' && document.body.contains(translationBox)) {
+            document.body.removeChild(translationBox);
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    
+    // Add event listener to close when clicking outside
+    const clickOutsideHandler = (e) => {
+        if (!translationBox.contains(e.target)) {
+            if (document.body.contains(translationBox)) {
+                document.body.removeChild(translationBox);
+                document.removeEventListener('click', clickOutsideHandler);
+            }
+        }
+    };
+    // Delay adding the click handler to prevent immediate closing
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 100);
 }
 
 // Helper function to create or get existing translation box
-function createOrUpdateTranslationBox() {
+function getTranslationBoxElement() {
+    injectGlobalStyles(); // Ensure styles are present
+
     let translationBox = document.getElementById('translation-box');
-    
     if (!translationBox) {
         translationBox = document.createElement('div');
         translationBox.id = 'translation-box';
-        
-        Object.assign(translationBox.style, {
-            position: 'fixed',
-            zIndex: '999999',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            padding: '16px',
-            maxHeight: '80vh',
-            width: '700px',
-            maxWidth: '90vw',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            direction: 'rtl',
-            fontFamily: 'Tahoma, Arial, sans-serif',
-            fontSize: '18px',
-            lineHeight: '1.8',
-            color: '#333'
-        });
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            #translation-box::-webkit-scrollbar {
-                width: 8px !important;
-            }
-            #translation-box::-webkit-scrollbar-thumb {
-                background-color: #ccc !important;
-                border-radius: 4px !important;
-            }
-            
-            #translation-box .translation-content {
-                font-family: Tahoma, Arial, sans-serif !important;
-                line-height: 1.8 !important;
-                color: #333 !important;
-                font-size: 18px !important;
-                text-align: right !important;
-                direction: rtl !important;
-                margin-top: 8px !important;
-                white-space: pre-wrap !important;
-                word-wrap: break-word !important;
-            }
-            
-            #translation-box .translation-close-btn {
-                position: absolute !important;
-                top: 8px !important;
-                left: 8px !important;
-                background: none !important;
-                border: none !important;
-                font-size: 24px !important;
-                color: #666 !important;
-                cursor: pointer !important;
-                padding: 4px 8px !important;
-                border-radius: 4px !important;
-            }
-            
-            #translation-box .translation-close-btn:hover {
-                background-color: #f5f5f5 !important;
-            }
-            
-            @keyframes translationBoxFadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            #translation-box {
-                animation: translationBoxFadeIn 0.2s ease-out !important;
-            }
-        `;
-        document.head.appendChild(style);
+        document.body.appendChild(translationBox);
+        // Add event listeners only when the box is first created
+        addTranslationBoxEventListeners(translationBox);
+        makeDraggable(translationBox, true); // Enable dragging and save position
     }
-    
+    // Clear previous content when reusing
+    translationBox.innerHTML = '';
     return translationBox;
-}
-
-// Helper function to create close button
-function createCloseButton() {
-    const closeButton = document.createElement('button');
-    closeButton.textContent = '×';
-    closeButton.className = 'translation-close-btn';
-    return closeButton;
 }
 
 // Helper function to add event listeners
@@ -468,6 +448,212 @@ function makeDraggable(element, savePosition = false) {
     }
 }
 
+// Centralized Styles and Box Management
+let stylesInjected = false;
+const XT_STYLE_ID = 'xtranslator-global-styles';
+const XT_FONT_STYLE_ID = 'xtranslator-vazirmatn-font-style';
+
+// Function to inject all necessary CSS styles once
+function injectGlobalStyles() {
+    if (stylesInjected || document.getElementById(XT_STYLE_ID)) {
+        stylesInjected = true;
+        return;
+    }
+
+    // Add @font-face declaration for Vazirmatn font if not already added
+    if (!document.getElementById(XT_FONT_STYLE_ID)) {
+        const fontStyle = document.createElement('style');
+        fontStyle.id = XT_FONT_STYLE_ID;
+        try {
+            // Try fetching the font URL via chrome.runtime.getURL
+            fontStyle.textContent = `
+                /* ========== Vazirmatn ========== */
+                @font-face {
+                    font-family: "Vazirmatn";
+                    src: url("${chrome.runtime.getURL('fonts/Vazirmatn[wght].ttf')}") format("truetype");
+                    font-weight: 100 900;
+                    font-style: normal;
+                    font-display: swap;
+                    unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+                }
+            `;
+            document.head.appendChild(fontStyle);
+        } catch (error) {
+            console.warn('XTranslator: Could not get font URL via chrome.runtime.getURL. Font may not load.', error);
+            // Fallback or alternative handling if needed
+        }
+    }
+
+    const style = document.createElement('style');
+    style.id = XT_STYLE_ID;
+    style.textContent = `
+        #translation-box {
+            position: fixed !important;
+            z-index: 999999 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
+            padding: 16px !important;
+            max-height: 80vh !important;
+            width: 350px !important; /* Default width, adjust as needed */
+            max-width: 90vw !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            direction: rtl !important;
+            font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            font-size: 15px !important; /* Base font size */
+            line-height: 1.7 !important;
+            text-align: right !important;
+            animation: translationBoxFadeIn 0.2s ease-out !important;
+            box-sizing: border-box !important; /* Include padding/border in width/height */
+            background-color: #23272f !important;
+            color: #e7e9ea !important;
+            border: 1px solid #38444d !important;
+        }
+
+        /* Light Theme (Default) */
+        #translation-box.light {
+            background-color: #f7f9f9 !important;
+            color: #0f1419 !important;
+            border: 1px solid #eff3f4 !important;
+        }
+        #translation-box.light .translation-content {
+            color: #0f1419 !important;
+        }
+         #translation-box.light .translation-close-btn {
+            color: #536471 !important;
+        }
+        #translation-box.light .translation-close-btn:hover {
+            color: #0f1419 !important;
+             background-color: rgba(15, 20, 25, 0.1) !important;
+        }
+        #translation-box.light::-webkit-scrollbar-thumb {
+             background-color: #ccc !important;
+        }
+        #translation-box.light .translation-button {
+            background-color: #1d9bf0 !important;
+            color: white !important;
+        }
+        #translation-box.light .translation-button:hover {
+            background-color: #1a8cd8 !important;
+        }
+         #translation-box.light .translation-button:disabled {
+            background-color: #1d9bf0 !important;
+            opacity: 0.5 !important;
+        }
+
+        /* Dark Theme */
+        #translation-box.dark {
+            background-color: #16181c !important; /* Darker background */
+            color: #e7e9ea !important;
+            border: 1px solid #38444d !important;
+        }
+         #translation-box.dark .translation-content {
+            color: #e7e9ea !important;
+        }
+        #translation-box.dark .translation-close-btn {
+            color: #71767b !important;
+        }
+        #translation-box.dark .translation-close-btn:hover {
+            color: #e7e9ea !important;
+             background-color: rgba(231, 233, 234, 0.1) !important;
+        }
+        #translation-box.dark::-webkit-scrollbar-thumb {
+             background-color: #555 !important;
+        }
+         #translation-box.dark .translation-button {
+            background-color: #1d9bf0 !important; /* Keep Twitter blue for buttons */
+            color: white !important;
+        }
+        #translation-box.dark .translation-button:hover {
+             background-color: #1a8cd8 !important;
+        }
+        #translation-box.dark .translation-button:disabled {
+            background-color: #1d9bf0 !important;
+            opacity: 0.5 !important;
+        }
+
+
+        /* Scrollbar */
+        #translation-box::-webkit-scrollbar {
+            width: 8px !important;
+        }
+        #translation-box::-webkit-scrollbar-thumb {
+             border-radius: 4px !important;
+        }
+
+        /* Content Area */
+        #translation-box .translation-content {
+            font-size: 16px !important; /* Slightly larger for readability */
+            line-height: 1.8 !important;
+            margin-bottom: 12px !important; /* Space before buttons */
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            font-family: "Vazirmatn", Tahoma, Arial, sans-serif !important; /* Ensure font */
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        /* Close Button */
+        #translation-box .translation-close-btn {
+            position: absolute !important;
+            top: 0px !important;
+            left: 0px !important;
+            background: none !important;
+            border: none !important;
+            font-size: 24px !important; /* Larger target */
+            cursor: pointer !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            line-height: 1 !important;
+            width: 28px !important; /* Slightly larger tap target */
+            height: 28px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 50% !important; /* Make it round on hover bg */
+            transition: background-color 0.2s ease;
+            color: #e7e9ea !important;
+        }
+        #translation-box .translation-close-btn:hover {
+            color: #fff !important;
+            background-color: rgba(231, 233, 234, 0.08) !important;
+        }
+         /* Hover styles handled in theme sections */
+
+        /* Button Container */
+        #translation-box .translation-button-container {
+            display: flex !important;
+            justify-content: flex-start !important; /* Align buttons to the start (right in RTL) */
+            gap: 8px !important; /* Space between buttons */
+            margin-top: 8px !important;
+        }
+
+        /* General Button Styles */
+        #translation-box .translation-button {
+            padding: 6px 12px !important;
+            border: none !important;
+            border-radius: 15px !important; /* Pill shape like Twitter */
+            cursor: pointer !important;
+            font-size: 13px !important;
+            font-weight: bold !important;
+            font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            transition: background-color 0.2s ease;
+        }
+         #translation-box .translation-button:disabled {
+             cursor: default !important;
+        }
+
+
+        /* Fade-in Animation */
+        @keyframes translationBoxFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    document.head.appendChild(style);
+    stylesInjected = true;
+}
+
 // تابع ترجمه با استفاده از API جمینی
 const translationCache = new Map();
 
@@ -545,183 +731,8 @@ async function performTranslation(tweet, textContent, lang, button) {
     try {
         const translation = await translateText(textContent);
         if (translation) {
-            // Check if there's already a translation box
-            const existingBox = document.getElementById('translation-box');
-            
-            // Create a new floating tooltip-style box or reuse existing one
-            let translationBox;
-            if (existingBox) {
-                translationBox = existingBox;
-                // Clear existing content
-                while (translationBox.firstChild) {
-                    translationBox.removeChild(translationBox.firstChild);
-                }
-            } else {
-                translationBox = document.createElement('div');
-                translationBox.id = 'translation-box';
-                
-                // Check if Twitter is in dark mode by looking at the background color
-                const isDarkMode = document.documentElement.style.colorScheme === 'dark' || 
-                                   window.matchMedia('(prefers-color-scheme: dark)').matches ||
-                                   document.body.classList.contains('dark') ||
-                                   getComputedStyle(document.body).backgroundColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)/)?.[1] < 50;
-                
-                // Apply Twitter-like styling based on theme
-                if (isDarkMode) {
-                    translationBox.style.backgroundColor = '#2f3336';
-                    translationBox.style.color = '#e7e9ea';
-                    translationBox.style.border = '1px solid #38444d';
-                } else {
-                    translationBox.style.backgroundColor = '#f7f9f9';
-                    translationBox.style.color = '#0f1419';
-                    translationBox.style.border = '1px solid #eff3f4';
-                }
-                
-                // Set position to fixed so it doesn't affect document flow
-                Object.assign(translationBox.style, {
-                    position: 'fixed',
-                    zIndex: '999999',
-                    padding: '10px',
-                    borderRadius: '12px',
-                    textAlign: 'right',
-                    direction: 'rtl',
-                    fontSize: '15px',
-                    lineHeight: '1.5',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                    maxHeight: '80vh',
-                    width: '350px',
-                    maxWidth: '90vw',
-                    overflowY: 'auto'
-                });
-            }
-            
-            // Create a container for the translation text
-            const translationText = document.createElement('div');
-            // Replace newline characters with <br> tags to preserve paragraph formatting
-            const formattedTranslation = translation.replace(/\n/g, '<br>');
-            translationText.innerHTML = formattedTranslation;
-            
-            // Add re-translate button
-            const retranslateButton = document.createElement('button');
-            retranslateButton.textContent = 'بازترجمه';
-            retranslateButton.style.marginTop = '10px';
-            retranslateButton.style.padding = '5px 10px';
-            retranslateButton.style.backgroundColor = '#1d9bf0'; // Twitter blue color
-            retranslateButton.style.color = 'white';
-            retranslateButton.style.border = 'none';
-            retranslateButton.style.borderRadius = '5px';
-            retranslateButton.style.cursor = 'pointer';
-            retranslateButton.style.fontSize = '13px';
-            
-            retranslateButton.addEventListener('click', async () => {
-                retranslateButton.disabled = true;
-                retranslateButton.textContent = 'در حال ترجمه...';
-                
-                try {
-                    // Clear translation cache for this text to get a fresh translation
-                    translationCache.delete(textContent);
-                    const newTranslation = await translateText(textContent);
-                    if (newTranslation) {
-                        // Replace newline characters with <br> tags for updated translation
-                        const formattedNewTranslation = newTranslation.replace(/\n/g, '<br>');
-                        translationText.innerHTML = formattedNewTranslation;
-                    }
-                } catch (error) {
-                    console.error('خطا در بازترجمه:', error);
-                    alert('خطا در بازترجمه.');
-                } finally {
-                    retranslateButton.disabled = false;
-                    retranslateButton.textContent = 'بازترجمه';
-                }
-            });
-            
-            // Add close button
-            const closeButton = document.createElement('button');
-            closeButton.textContent = '×';
-            closeButton.style.position = 'absolute';
-            closeButton.style.top = '8px';
-            closeButton.style.left = '8px';
-            closeButton.style.background = 'none';
-            closeButton.style.border = 'none';
-            closeButton.style.fontSize = '20px';
-            closeButton.style.color = '#666';
-            closeButton.style.cursor = 'pointer';
-            closeButton.style.padding = '0 5px';
-            
-            closeButton.addEventListener('click', () => {
-                document.body.removeChild(translationBox);
-            });
-            
-            // Add elements to the box
-            translationBox.appendChild(closeButton);
-            translationBox.appendChild(translationText);
-            translationBox.appendChild(retranslateButton);
-            
-            // Add to the page if it's not already there
-            if (!document.body.contains(translationBox)) {
-                document.body.appendChild(translationBox);
-            }
-            
-            // Get viewport dimensions
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            // Get box dimensions
-            const boxRect = translationBox.getBoundingClientRect();
-            
-            // Use last position if available, otherwise center the box
-            let top, left;
-            
-            if (lastTranslationBoxPosition.positionSet) {
-                // Use the last position
-                top = lastTranslationBoxPosition.top;
-                left = lastTranslationBoxPosition.left;
-            } else {
-                // Center the box in the viewport
-                top = (viewportHeight - boxRect.height) / 2;
-                left = (viewportWidth - boxRect.width) / 2;
-            }
-            
-            // Make sure it doesn't go off-screen
-            if (left < 10) left = 10;
-            if (top < 10) top = 10;
-            if (left + boxRect.width > viewportWidth - 10) {
-                left = viewportWidth - boxRect.width - 10;
-            }
-            if (top + boxRect.height > viewportHeight - 10) {
-                top = viewportHeight - boxRect.height - 10;
-            }
-            
-            // Apply the position
-            translationBox.style.top = `${top}px`;
-            translationBox.style.left = `${left}px`;
-            
-            // Make the box draggable and update position when dragged
-            makeDraggable(translationBox, true);
-            
-            // Add event listener to close on Escape key
-            const escapeHandler = (e) => {
-                if (e.key === 'Escape' && document.body.contains(translationBox)) {
-                    document.body.removeChild(translationBox);
-                    document.removeEventListener('keydown', escapeHandler);
-                }
-            };
-            document.addEventListener('keydown', escapeHandler);
-            
-            // Add event listener to close when clicking outside
-            const clickOutsideHandler = (e) => {
-                if (!translationBox.contains(e.target) && e.target !== button) {
-                    if (document.body.contains(translationBox)) {
-                        document.body.removeChild(translationBox);
-                        document.removeEventListener('click', clickOutsideHandler);
-                    }
-                }
-            };
-            // Delay adding the click handler to prevent immediate closing
-            setTimeout(() => {
-                document.addEventListener('click', clickOutsideHandler);
-            }, 100);
+            // Use our unified displayTranslation function
+            displayTranslation(translation, textContent);
         } else {
             alert('خطا در ترجمه.');
         }
@@ -971,8 +982,66 @@ function addPdfTranslationButton() {
         translateButton.style.backgroundColor = '#749e00';
     });
     
-    // Add click event
-    translateButton.addEventListener('click', captureAndTranslatePdf);
+    // Add click event - show menu to choose mode
+    translateButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Remove existing menu if any
+        const existingMenu = document.getElementById('pdf-translate-menu');
+        if (existingMenu) existingMenu.remove();
+
+        // Create the menu
+        const menu = document.createElement('div');
+        menu.id = 'pdf-translate-menu';
+        menu.style.position = 'fixed';
+        menu.style.top = (translateButton.offsetTop + translateButton.offsetHeight + 8) + 'px';
+        menu.style.right = (parseInt(translateButton.style.right, 10)) + 'px';
+        menu.style.background = '#fff';
+        menu.style.border = '1px solid #ccc';
+        menu.style.borderRadius = '6px';
+        menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        menu.style.zIndex = '1000000';
+        menu.style.minWidth = '170px';
+        menu.style.fontFamily = 'Tahoma, Arial, sans-serif';
+        menu.style.padding = '0.5em 0';
+
+        // Option 1: Translate visible page
+        const pageOption = document.createElement('div');
+        pageOption.textContent = 'ترجمه صفحه قابل مشاهده';
+        pageOption.style.padding = '8px 16px';
+        pageOption.style.cursor = 'pointer';
+        pageOption.addEventListener('mouseover', () => pageOption.style.background = '#f0f0f0');
+        pageOption.addEventListener('mouseout', () => pageOption.style.background = '');
+        pageOption.onclick = function() {
+            menu.remove();
+            captureAndTranslatePdf();
+        };
+        menu.appendChild(pageOption);
+
+        // Option 2: Area selection
+        const areaOption = document.createElement('div');
+        areaOption.textContent = 'انتخاب ناحیه برای ترجمه';
+        areaOption.style.padding = '8px 16px';
+        areaOption.style.cursor = 'pointer';
+        areaOption.addEventListener('mouseover', () => areaOption.style.background = '#f0f0f0');
+        areaOption.addEventListener('mouseout', () => areaOption.style.background = '');
+        areaOption.onclick = function() {
+            menu.remove();
+            startAreaSelection();
+        };
+        menu.appendChild(areaOption);
+
+        // Remove menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('mousedown', function handler(ev) {
+                if (!menu.contains(ev.target) && ev.target !== translateButton) {
+                    menu.remove();
+                    document.removeEventListener('mousedown', handler);
+                }
+            });
+        }, 0);
+
+        document.body.appendChild(menu);
+    });
     
     // Add to the page
     document.body.appendChild(translateButton);
@@ -1005,103 +1074,9 @@ new MutationObserver(() => {
     }
 }).observe(document, { subtree: true, childList: true });
 
-// Function to capture and translate PDF
+// Function to capture and translate PDF (visible page)
 async function captureAndTranslatePdf() {
     console.log('Starting PDF translation process');
-    showPdfCaptureOptions();
-}
-
-// Function to show PDF capture options
-function showPdfCaptureOptions() {
-    console.log('Showing PDF capture options');
-    // Remove existing options if any
-    const existingOptions = document.getElementById('pdf-capture-options');
-    if (existingOptions) existingOptions.remove();
-    
-    // Create options container
-    const optionsContainer = document.createElement('div');
-    optionsContainer.id = 'pdf-capture-options';
-    optionsContainer.style.position = 'fixed';
-    optionsContainer.style.top = '70px';
-    optionsContainer.style.right = '20px';
-    optionsContainer.style.zIndex = '999999';
-    optionsContainer.style.backgroundColor = 'white';
-    optionsContainer.style.padding = '15px';
-    optionsContainer.style.borderRadius = '8px';
-    optionsContainer.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-    optionsContainer.style.fontFamily = 'Tahoma, Arial, sans-serif';
-    optionsContainer.style.direction = 'rtl';
-    optionsContainer.style.textAlign = 'right';
-    
-    // Add title
-    const title = document.createElement('h3');
-    title.textContent = 'انتخاب روش ترجمه';
-    title.style.margin = '0 0 15px 0';
-    title.style.fontSize = '16px';
-    title.style.color = '#333';
-    optionsContainer.appendChild(title);
-    
-    // Add options
-    const fullPageOption = createOptionButton('ترجمه کل صفحه', captureFullPage);
-    const selectionOption = createOptionButton('ترجمه ناحیه انتخابی', startAreaSelection);
-    
-    optionsContainer.appendChild(fullPageOption);
-    optionsContainer.appendChild(selectionOption);
-    
-    // Add close button
-    const closeButton = document.createElement('button');
-    closeButton.textContent = '✕';
-    closeButton.style.position = 'absolute';
-    closeButton.style.top = '5px';
-    closeButton.style.left = '5px';
-    closeButton.style.backgroundColor = 'transparent';
-    closeButton.style.border = 'none';
-    closeButton.style.fontSize = '16px';
-    closeButton.style.cursor = 'pointer';
-    closeButton.style.color = '#666';
-    
-    closeButton.addEventListener('click', () => {
-        optionsContainer.remove();
-    });
-    
-    optionsContainer.appendChild(closeButton);
-    document.body.appendChild(optionsContainer);
-}
-
-// Function to create option button
-function createOptionButton(text, clickHandler) {
-    const button = document.createElement('button');
-    button.textContent = text;
-    button.style.display = 'block';
-    button.style.width = '100%';
-    button.style.padding = '10px';
-    button.style.margin = '8px 0';
-    button.style.backgroundColor = '#f5f8fa';
-    button.style.border = '1px solid #ddd';
-    button.style.borderRadius = '4px';
-    button.style.cursor = 'pointer';
-    button.style.textAlign = 'center';
-    button.style.fontFamily = 'Tahoma, Arial, sans-serif';
-    
-    button.addEventListener('mouseover', () => {
-        button.style.backgroundColor = '#e8f0fe';
-    });
-    
-    button.addEventListener('mouseout', () => {
-        button.style.backgroundColor = '#f5f8fa';
-    });
-    
-    button.addEventListener('click', () => {
-        document.getElementById('pdf-capture-options').remove();
-        clickHandler();
-    });
-    
-    return button;
-}
-
-// Function to capture full page
-async function captureFullPage() {
-    console.log('Capturing full page');
     showLoadingIndicator();
     
     try {

@@ -523,67 +523,6 @@ function injectGlobalStyles() {
             border: 1px solid #38444d !important;
         }
 
-        /* Light Theme (Default) */
-        #translation-box.light {
-            background-color: #f7f9f9 !important;
-            color: #0f1419 !important;
-            border: 1px solid #eff3f4 !important;
-        }
-        #translation-box.light .translation-content {
-            color: #0f1419 !important;
-        }
-         #translation-box.light .translation-close-btn {
-            color: #536471 !important;
-        }
-        #translation-box.light .translation-close-btn:hover {
-            color: #0f1419 !important;
-             background-color: rgba(15, 20, 25, 0.1) !important;
-        }
-        #translation-box.light::-webkit-scrollbar-thumb {
-             background-color: #ccc !important;
-        }
-        #translation-box.light .translation-button {
-            background-color: #1d9bf0 !important;
-            color: white !important;
-        }
-        #translation-box.light .translation-button:hover {
-            background-color: #1a8cd8 !important;
-        }
-         #translation-box.light .translation-button:disabled {
-            background-color: #1d9bf0 !important;
-            opacity: 0.5 !important;
-        }
-
-        /* Dark Theme */
-        #translation-box.dark {
-            background-color: #16181c !important; /* Darker background */
-            color: #e7e9ea !important;
-            border: 1px solid #38444d !important;
-        }
-         #translation-box.dark .translation-content {
-            color: #e7e9ea !important;
-        }
-        #translation-box.dark .translation-close-btn {
-            color: #71767b !important;
-        }
-        #translation-box.dark .translation-close-btn:hover {
-            color: #e7e9ea !important;
-             background-color: rgba(231, 233, 234, 0.1) !important;
-        }
-        #translation-box.dark::-webkit-scrollbar-thumb {
-             background-color: #555 !important;
-        }
-         #translation-box.dark .translation-button {
-            background-color: #1d9bf0 !important; /* Keep Twitter blue for buttons */
-            color: white !important;
-        }
-        #translation-box.dark .translation-button:hover {
-             background-color: #1a8cd8 !important;
-        }
-        #translation-box.dark .translation-button:disabled {
-            background-color: #1d9bf0 !important;
-            opacity: 0.5 !important;
-        }
 
 
         /* Scrollbar */
@@ -631,7 +570,6 @@ function injectGlobalStyles() {
             color: #fff !important;
             background-color: rgba(231, 233, 234, 0.08) !important;
         }
-         /* Hover styles handled in theme sections */
 
         /* Button Container */
         #translation-box .translation-button-container {
@@ -972,7 +910,7 @@ function addPdfTranslationButton() {
     translateButton.style.right = '180px';
     translateButton.style.zIndex = '999999';
     translateButton.style.padding = '8px 16px';
-    translateButton.style.backgroundColor = '#749e00';
+    translateButton.style.backgroundColor = '#01afbe';
     translateButton.style.color = 'white';
     translateButton.style.border = 'none';
     translateButton.style.borderRadius = '4px';
@@ -983,25 +921,62 @@ function addPdfTranslationButton() {
     
     // Add hover effect
     translateButton.addEventListener('mouseover', () => {
-        translateButton.style.backgroundColor = '#8bbc00';
+        translateButton.style.backgroundColor = '#13cbe0';
     });
     
     translateButton.addEventListener('mouseout', () => {
-        translateButton.style.backgroundColor = '#749e00';
+        translateButton.style.backgroundColor = '#01afbe';
     });
     
     // Add click event - show menu to choose mode
-    translateButton.addEventListener('click', function(e) {
-        e.stopPropagation();
-        // Remove existing menu if any
+    // Helper to remove menu and its outside click listener
+    function removeMenuAndListener() {
         const existingMenu = document.getElementById('pdf-translate-menu');
         if (existingMenu) existingMenu.remove();
+        document.removeEventListener('pointerdown', outsideClickListener, true);
+    }
 
-        // Create the menu
+    function outsideClickListener(event) {
+        const menu = document.getElementById('pdf-translate-menu');
+        // If no menu or click inside menu or on button, do nothing
+        if (!menu || menu.contains(event.target) || event.target === translateButton) return;
+        removeMenuAndListener();
+    }
+
+    translateButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const existingMenu = document.getElementById('pdf-translate-menu');
+        if (existingMenu) {
+            removeMenuAndListener();
+            return;
+        }
+        // Otherwise, open the menu
         const menu = document.createElement('div');
         menu.id = 'pdf-translate-menu';
         menu.style.position = 'fixed';
         menu.style.top = (translateButton.offsetTop + translateButton.offsetHeight + 8) + 'px';
+        menu.style.right = (parseInt(translateButton.style.right, 10)) + 'px';
+        menu.style.background = '#fff';
+        menu.style.border = '1px solid #ccc';
+        menu.style.borderRadius = '6px';
+        menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        // Prevent clicks inside menu from closing it
+        menu.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); }, true);
+        // Add menu to DOM
+        document.body.appendChild(menu);
+        // Delay outside click activation to avoid immediate close
+        setTimeout(() => {
+            document.addEventListener('pointerdown', outsideClickListener, true);
+        }, 0);
+        // If menu is removed by any means, clean up listener
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains(menu)) {
+                document.removeEventListener('pointerdown', outsideClickListener, true);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true });
+
         menu.style.right = (parseInt(translateButton.style.right, 10)) + 'px';
         menu.style.background = '#fff';
         menu.style.border = '1px solid #ccc';

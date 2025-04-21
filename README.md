@@ -11,7 +11,6 @@ This Chrome extension allows Twitter users to translate tweets and text in forei
 - **Selected Text Translation**: Select any text on any website and a translate button will appear, allowing you to translate the selected text into your chosen language.
 - **PDF Translation**: Translate the currently visible page or specific sections of PDF files into your chosen language.
 - **Automatic Language Detection**: The system automatically detects the language of the text and translates it to your selected language.
-- **Dark Mode Compatibility**: The extension's UI adapts to Twitter's light and dark modes.
 - **Custom Translation Prompt**: Users can enter their own prompt for translation to adjust the model and tone according to their needs.
 
 ### Installation
@@ -47,7 +46,6 @@ If you are interested in improving this project, you can contribute via Pull Req
 - **ترجمه متن انتخابی**: با انتخاب هر متنی در هر وب‌سایت، دکمه ترجمه ظاهر می‌شود که با کلیک روی آن، متن انتخاب شده به زبان انتخابی شما ترجمه می‌شود.
 - **ترجمه فایل‌های PDF**: امکان ترجمه صفحه در حال نمایش یا بخش خاصی از فایل‌های PDF به زبان انتخابی شما.
 - **تشخیص خودکار زبان**: سیستم به صورت خودکار زبان متن را تشخیص داده و آن را به زبان انتخابی شما ترجمه می‌کند.
-- **سازگاری با حالت تاریک**: رابط کاربری اکستنشن با حالت تاریک و روشن توییتر سازگار است.
 - **دستور ترجمه سفارشی**: کاربران می‌توانند پرامپت مورد نظر خود را برای ترجمه وارد کنند تا مدل و لحن ترجمه مطابق با نیاز آن‌ها باشد.
 
 ### نحوه نصب

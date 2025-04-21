@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تنظیمات ترجمه توییت</title>
+    <title>XTranslator Settings</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            direction: rtl;
-            text-align: right;
+            direction: ltr;
+            text-align: left;
             margin: 0;
             padding: 0;
             background-color: #f5f8fa;
@@ -139,23 +139,58 @@
     </style>
 </head>
 <body>
-    <h3>تنظیمات ترجمه</h3>
+    <h3>EV Translator AI Settings</h3>
     
     <div class="container">
-        <p>برای استفاده از این افزونه، لطفاً API Key جمینای خود را وارد کنید. همچنین می‌توانید دستور ترجمه را سفارشی کنید.</p>
+        <p>Please enter your Gemini API Key and select your preferred translation language. You can also customize the translation prompt.</p>
         
-        <label for="api-key">API Key جمینای:</label>
-        <input type="text" id="api-key" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label for="api-key">Gemini API Key:</label>
+        <input type="text" id="api-key" style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <p style="font-size: 12px; color: #555; margin-bottom: 15px;"><a href="https://console.cloud.google.com/apis/credentials?createKeyType=API_KEY" target="_blank" rel="noopener">Create your Gemini API Key</a></p>
         
-        <label for="translation-prompt">دستور ترجمه:</label>
+        <label for="target-language">Translation Language:</label>
+        <select id="target-language" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <option value="Persian">Persian</option>
+            <option value="English">English</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Russian">Russian</option>
+            <option value="Arabic">Arabic</option>
+            <option value="Italian">Italian</option>
+            <option value="Portuguese">Portuguese</option>
+            <option value="Korean">Korean</option>
+        </select>
+        <label for="exclude-lang" style="margin-bottom:10px;display:block;font-size:14px;">Don't show translate button for tweets in:</label>
+        <select id="exclude-lang" style="width:100%;padding:8px;margin-bottom:15px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+            <option value="">-- None --</option>
+            <option value="fa">Persian</option>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="zh">Chinese</option>
+            <option value="ja">Japanese</option>
+            <option value="ru">Russian</option>
+            <option value="ar">Arabic</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="ko">Korean</option>
+        </select>
+        
+        <label for="translation-prompt">Translation Prompt:</label>
         <textarea id="translation-prompt" style="width: 100%; height: 150px; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 13px; resize: vertical;"></textarea>
+        <p style="font-size: 12px; color: #666;">Use <code>&lt;TEXT&gt;</code> as a placeholder for the text to translate and <code>&lt;LANGUAGE&gt;</code> for the target language.</p>
         
-        <button id="save-settings" style="background-color: #749e00; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;">ذخیره تنظیمات</button>
+        <button id="save-settings" style="background-color: #749e00; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;">Save Settings</button>
         
-        <div id="status" style="display: none; text-align: center; margin-top: 10px; padding: 8px; background-color: #e8f5e9; color: #2e7d32; border-radius: 4px;">تنظیمات با موفقیت ذخیره شد!</div>
+        <div id="status" style="display: none; text-align: center; margin-top: 10px; padding: 8px; background-color: #e8f5e9; color: #2e7d32; border-radius: 4px;">Settings saved successfully!</div>
         
     </div>
     
+    <script src="defaults.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

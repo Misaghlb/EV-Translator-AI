@@ -147,9 +147,22 @@ function displayTranslation(translation, originalText = null) {
     const formattedTranslation = translation.replace(/\n/g, '<br>');
     translationText.innerHTML = formattedTranslation;
     
+    // Set text direction based on target language (RTL for certain languages)
+    chrome.storage.sync.get(['targetLanguage'], ({ targetLanguage }) => {
+        const rtlLangs = ['arabic', 'persian', 'farsi', 'urdu', 'hebrew'];
+        const lang = (targetLanguage || '').toLowerCase();
+        if (rtlLangs.includes(lang)) {
+            translationText.style.direction = 'rtl';
+            translationText.style.textAlign = 'right';
+        } else {
+            translationText.style.direction = 'ltr';
+            translationText.style.textAlign = 'left';
+        }
+    });
+    
     // Add re-translate button
     const retranslateButton = document.createElement('button');
-    retranslateButton.textContent = 'بازترجمه';
+    retranslateButton.textContent = 'Re-translate';
     retranslateButton.style.marginTop = '10px';
     retranslateButton.style.padding = '5px 10px';
     retranslateButton.style.backgroundColor = '#1d9bf0'; // Twitter blue color
@@ -164,7 +177,7 @@ function displayTranslation(translation, originalText = null) {
     if (originalText) {
         retranslateButton.addEventListener('click', async () => {
             retranslateButton.disabled = true;
-            retranslateButton.textContent = 'در حال ترجمه...';
+            retranslateButton.textContent = 'Translating...';
             
             try {
                 // Clear translation cache for this text to get a fresh translation
@@ -176,11 +189,11 @@ function displayTranslation(translation, originalText = null) {
                     translationText.innerHTML = formattedNewTranslation;
                 }
             } catch (error) {
-                console.error('خطا در بازترجمه:', error);
-                alert('خطا در بازترجمه.');
+                console.error('Translation error:', error);
+                alert('Translation error.');
             } finally {
                 retranslateButton.disabled = false;
-                retranslateButton.textContent = 'بازترجمه';
+                retranslateButton.textContent = 'Re-translate';
             }
         });
     } else {
@@ -200,7 +213,7 @@ function displayTranslation(translation, originalText = null) {
     
     // Add copy button
     const copyButton = document.createElement('button');
-    copyButton.textContent = 'کپی';
+    copyButton.textContent = 'Copy';
     copyButton.style.marginTop = '10px';
     copyButton.style.marginRight = '10px';
     copyButton.style.padding = '5px 10px';
@@ -231,7 +244,7 @@ function displayTranslation(translation, originalText = null) {
         navigator.clipboard.writeText(textToCopy).then(() => {
             // Provide visual feedback that text was copied
             const originalText = copyButton.textContent;
-            copyButton.textContent = 'کپی شد!';
+            copyButton.textContent = 'Copied!';
             copyButton.style.backgroundColor = '#28a745'; // Green color for success
             
             // Reset button after a short delay
@@ -240,8 +253,8 @@ function displayTranslation(translation, originalText = null) {
                 copyButton.style.backgroundColor = '#1d9bf0';
             }, 2000);
         }).catch(err => {
-            console.error('خطا در کپی متن:', err);
-            alert('خطا در کپی متن.');
+            console.error('Copy error:', err);
+            alert('Copy error.');
         });
     });
     
@@ -654,7 +667,7 @@ function injectGlobalStyles() {
     stylesInjected = true;
 }
 
-// تابع ترجمه با استفاده از API جمینی
+// Function to translate text using Gemini API
 const translationCache = new Map();
 
 async function translateText(text) {
@@ -663,35 +676,25 @@ async function translateText(text) {
     }
 
     try {
-        // Get API key and prompt from storage with fallback
-        let apiKey, translationPrompt;
+        // Get API key, prompt, and target language from storage
+        const { apiKey, translationPrompt, targetLanguage } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage']);
         
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-            const result = await chrome.storage.sync.get(['apiKey', 'translationPrompt']);
-            apiKey = result.apiKey;
-            translationPrompt = result.translationPrompt;
-        }
-
-        // Try localStorage as fallback for API key
-        if (!apiKey && typeof localStorage !== 'undefined') {
-            apiKey = localStorage.getItem('geminiApiKey');
-        }
-
         if (!apiKey) {
             console.error('API key not found. Please set it in the extension settings.');
             return null;
         }
 
-        // Default prompt if none is set
-        const defaultPrompt = `You are a professional translator. Please translate the following text into fluent, natural Persian. Use proper Persian idioms and formal native structures where appropriate. Here's the text to translate:
+        if (!translationPrompt) {
+            console.error('Translation prompt not found in storage');
+            return null;
+        }
 
-<TEXT>
+        let prompt = translationPrompt;
+        prompt = prompt.replace('<TEXT>', text);
+        prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage || 'Persian');
 
-Translate the above text into Persian.`;
-
-        const prompt = (translationPrompt || defaultPrompt).replace('<TEXT>', text);
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
+        
         const payload = {
             contents: [{
                 parts: [{ text: prompt }]
@@ -717,7 +720,7 @@ Translate the above text into Persian.`;
         const result = await response.json();
         return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
     } catch (error) {
-        console.warn('مشکل در ترجمه:', error.message);
+        console.warn('Error translating:', error.message);
         return null;
     }
 }
@@ -726,7 +729,7 @@ async function performTranslation(tweet, textContent, lang, button) {
     // Store original text to restore it later
     const originalText = button.textContent;
     button.disabled = true;
-    button.textContent = 'در حال ترجمه...';
+    button.textContent = 'Translating...';
 
     try {
         const translation = await translateText(textContent);
@@ -734,11 +737,11 @@ async function performTranslation(tweet, textContent, lang, button) {
             // Use our unified displayTranslation function
             displayTranslation(translation, textContent);
         } else {
-            alert('خطا در ترجمه.');
+            alert('Translation failed.');
         }
     } catch (error) {
-        console.error('خطا در ترجمه:', error);
-        alert('خطا در ترجمه.');
+        console.error('Translation error:', error);
+        alert('Translation error.');
     } finally {
         button.disabled = false;
         button.textContent = originalText; // Restore the original button text
@@ -750,18 +753,23 @@ function isTwitterSite() {
     return window.location.hostname === 'twitter.com' || window.location.hostname === 'x.com';
 }
 
-// تابعی برای افزودن دکمه ترجمه زیر توییت‌های غیر فارسی
+// Function to add translation buttons below non-Persian tweets
 async function addTranslateButtons() {
     // Only add tweet translation buttons on Twitter/X
     if (!isTwitterSite()) {
         return;
     }
 
-    // Only add the translate button to the main tweet text, not quoted/embedded tweets
+    // Get the user-selected language to exclude
+    const { excludeTweetLang } = await chrome.storage.sync.get(['excludeTweetLang']);
+    
     const tweets = Array.from(document.querySelectorAll('article')).map(article => {
-        // Find all div[dir="auto"] inside this article, but only those that are not inside another article (quoted tweets)
-        // Also, only select the first matching div[dir="auto"] that is not Persian
-        const candidates = Array.from(article.querySelectorAll('div[dir="auto"]:not([lang="fa"])'));
+        // Build selector: if excludeTweetLang, exclude that lang; otherwise, select all
+        let selector = 'div[dir="auto"]';
+        if (excludeTweetLang) {
+            selector += `:not([lang="${excludeTweetLang}"])`;
+        }
+        const candidates = Array.from(article.querySelectorAll(selector));
         // Exclude divs that are inside a quoted tweet (which are nested articles)
         const mainCandidates = candidates.filter(div => !div.closest('article article'));
         // Only pick the first one, which is the main tweet text
@@ -804,7 +812,7 @@ async function addTranslateButtons() {
             if (window.innerWidth < 600) {
                 // Icon only: Use bold T for Translate
                 button.innerHTML = '<span style="font-weight:bold;font-size:11px;line-height:1;color:#1d9bf0;">T</span>';
-                button.title = 'ترجمه';
+                button.title = 'Translate';
                 button.style.padding = '1px 4px';
                 button.style.margin = '0 4px 0 0';
                 button.style.fontSize = '0px'; // Hide text
@@ -816,8 +824,8 @@ async function addTranslateButtons() {
                 button.style.alignItems = 'center';
                 button.style.justifyContent = 'center';
             } else {
-                button.innerHTML = 'ترجمه';
-                button.title = 'ترجمه';
+                button.innerHTML = 'Translate';
+                button.title = 'Translate';
                 button.style.padding = '1px 4px';
                 button.style.margin = '0 4px 0 0';
                 button.style.fontSize = '11px';
@@ -958,7 +966,7 @@ function addPdfTranslationButton() {
     // Create the button
     const translateButton = document.createElement('button');
     translateButton.id = 'pdf-translate-button';
-    translateButton.textContent = 'ترجمه PDF';
+    translateButton.textContent = 'Translate PDF';
     translateButton.style.position = 'fixed';
     translateButton.style.top = '20px';
     translateButton.style.right = '180px';
@@ -1006,7 +1014,7 @@ function addPdfTranslationButton() {
 
         // Option 1: Translate visible page
         const pageOption = document.createElement('div');
-        pageOption.textContent = 'ترجمه صفحه قابل مشاهده';
+        pageOption.textContent = 'Translate visible page';
         pageOption.style.padding = '8px 16px';
         pageOption.style.cursor = 'pointer';
         pageOption.addEventListener('mouseover', () => pageOption.style.background = '#f0f0f0');
@@ -1019,7 +1027,7 @@ function addPdfTranslationButton() {
 
         // Option 2: Area selection
         const areaOption = document.createElement('div');
-        areaOption.textContent = 'انتخاب ناحیه برای ترجمه';
+        areaOption.textContent = 'Select area to translate';
         areaOption.style.padding = '8px 16px';
         areaOption.style.cursor = 'pointer';
         areaOption.addEventListener('mouseover', () => areaOption.style.background = '#f0f0f0');
@@ -1090,18 +1098,18 @@ async function captureAndTranslatePdf() {
                 if (translation) {
                     displayTranslation(translation);
                 } else {
-                    alert('ترجمه با مشکل مواجه شد.');
+                    alert('Translation failed.');
                 }
             } else {
                 hideLoadingIndicator();
                 console.error('Failed to capture screenshot:', response?.error);
-                alert('گرفتن تصویر با مشکل مواجه شد.');
+                alert('Failed to capture image.');
             }
         });
     } catch (error) {
         hideLoadingIndicator();
         console.error('Error capturing full page:', error);
-        alert('خطا در گرفتن تصویر صفحه: ' + error.message);
+        alert('Error capturing page: ' + error.message);
     }
 }
 
@@ -1132,7 +1140,7 @@ function startAreaSelection() {
     
     // Create instruction text
     const instruction = document.createElement('div');
-    instruction.textContent = 'ناحیه مورد نظر را انتخاب کنید. برای لغو، کلید ESC را فشار دهید.';
+    instruction.textContent = 'Select the area you want to translate. To cancel, press the ESC key.';
     instruction.style.position = 'fixed';
     instruction.style.top = '10px';
     instruction.style.left = '50%';
@@ -1256,7 +1264,7 @@ async function captureSelectedArea(rect) {
             if (chrome.runtime.lastError) {
                 console.error('Chrome runtime error:', chrome.runtime.lastError);
                 hideLoadingIndicator();
-                alert('خطا در گرفتن تصویر: ' + chrome.runtime.lastError.message);
+                alert('Error capturing image: ' + chrome.runtime.lastError.message);
                 return;
             }
             
@@ -1267,35 +1275,36 @@ async function captureSelectedArea(rect) {
                 if (translation) {
                     displayTranslation(translation);
                 } else {
-                    alert('ترجمه با مشکل مواجه شد.');
+                    alert('Translation failed.');
                 }
             } else {
                 hideLoadingIndicator();
                 console.error('Failed to capture area:', response?.error);
-                alert('گرفتن تصویر با مشکل مواجه شد.');
+                alert('Failed to capture image.');
             }
         });
     } catch (error) {
         hideLoadingIndicator();
         console.error('Error capturing selected area:', error);
-        alert('خطا در گرفتن تصویر ناحیه انتخابی: ' + error.message);
+        alert('Error capturing area: ' + error.message);
     }
 }
 
 // Function to translate image using Gemini API
 async function translateImage(imageDataUrl) {
     console.log('Starting image translation');
-    const { apiKey, translationPrompt } = await chrome.storage.sync.get(['apiKey', 'translationPrompt']);
+    const { apiKey, translationPrompt, targetLanguage } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage']);
+    const selectedLanguage = targetLanguage || 'Persian';
 
     if (!apiKey) {
         console.error('API key not found');
-        alert('لطفاً API Key را در تنظیمات افزونه وارد کنید.');
+        alert('Please enter your API Key in the extension settings.');
         return null;
     }
     
-    const defaultImagePrompt = `You are a professional translator tasked with converting text in this image into fluent, natural Persian. Extract all visible text from the image and translate it with precision, using Persian idioms, formal native structures, and a refined literary tone. Preserve the original text formatting as much as possible, including paragraph structure and any visible formatting. Provide only the translated content without any additional comments or explanations.`;
-    
-    const prompt = translationPrompt || defaultImagePrompt;
+    let prompt = translationPrompt || DEFAULT_IMAGE_TRANSLATION_PROMPT;
+    prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage);
+
     const base64Image = imageDataUrl.split(',')[1];
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
@@ -1378,7 +1387,7 @@ function showLoadingIndicator() {
     document.head.appendChild(style);
     
     const text = document.createElement('div');
-    text.textContent = 'در حال ترجمه...';
+    text.textContent = 'Translating...';
     
     loadingIndicator.appendChild(spinner);
     loadingIndicator.appendChild(text);

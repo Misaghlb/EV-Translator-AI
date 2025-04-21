@@ -1,5 +1,5 @@
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('اکستنشن نصب شد و آماده به کار است.');
+    console.log('Extension installed and ready to go.');
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -8,7 +8,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const languages = data.selectedLanguages || ['auto'];
             sendResponse({ languages });
         });
-        return true; // اجازه پاسخ غیربلوک‌کننده
+        return true; // Allow non-blocking response
     }
     
     // Handle screenshot capture request
@@ -37,7 +37,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ imageDataUrl: dataUrl });
             }
         });
-        return true; // اجازه پاسخ غیربلوک‌کننده
+        return true; // Allow non-blocking response
     }
 });
 

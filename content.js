@@ -72,8 +72,15 @@ function showTranslationButton(event, selectedText) {
     translateButton.id = 'translate-selected-text';
     translateButton.textContent = 'Translate';
     translateButton.style.position = 'fixed';
-    translateButton.style.top = event.clientY + 'px';
-    translateButton.style.left = event.clientX + 'px';
+    // Offset the button so it doesn't appear directly under the cursor
+    const OFFSET = 70;
+    let top = event.clientY + OFFSET;
+    let left = event.clientX + OFFSET;
+    // Prevent the button from going out of viewport
+    if (top > window.innerHeight - 40) top = window.innerHeight - 40;
+    if (left > window.innerWidth - 100) left = window.innerWidth - 100;
+    translateButton.style.top = top + 'px';
+    translateButton.style.left = left + 'px';
     translateButton.style.zIndex = '1000';
     translateButton.style.backgroundColor = '#4CAF50';
     translateButton.style.color = 'white';

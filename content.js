@@ -1,3 +1,12 @@
+// Listen for screenshot actions from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'screenshot_full_translate') {
+        captureAndTranslatePdf();
+    } else if (request.action === 'screenshot_area_translate') {
+        startAreaSelection();
+    }
+});
+
 // Function to add context menu
 let isMouseDown = false;
 let selectionTimer = null;

@@ -53,4 +53,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 2000);
         });
     });
+
+    // Screenshot Full Page
+    document.getElementById('screenshot-full').addEventListener('click', () => {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs[0]?.id) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'screenshot_full_translate' });
+            }
+        });
+    });
+
+    // Screenshot Area
+    document.getElementById('screenshot-area').addEventListener('click', () => {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs[0]?.id) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'screenshot_area_translate' });
+            }
+        });
+    });
 });

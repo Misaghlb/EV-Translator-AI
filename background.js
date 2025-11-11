@@ -53,15 +53,22 @@ async function cropImageOffscreen(dataUrl, area) {
     // Create a bitmap from the array buffer
     const bitmap = await createImageBitmap(new Blob([arrayBuffer]));
     
-    // Create an OffscreenCanvas
-    const canvas = new OffscreenCanvas(area.width, area.height);
+    // Determine scale to match screenshot resolution (device pixel ratio)
+    const scale = (typeof area.scale === 'number' && area.scale > 0) ? area.scale : 1;
+    const sourceLeft = Math.round(area.left * scale);
+    const sourceTop = Math.round(area.top * scale);
+    const sourceWidth = Math.round(area.width * scale);
+    const sourceHeight = Math.round(area.height * scale);
+
+    // Create an OffscreenCanvas at the scaled size for best quality
+    const canvas = new OffscreenCanvas(sourceWidth, sourceHeight);
     const ctx = canvas.getContext('2d');
     
-    // Draw the cropped portion of the image
+    // Draw the cropped portion of the image using scaled coordinates
     ctx.drawImage(
         bitmap,
-        area.left, area.top, area.width, area.height,
-        0, 0, area.width, area.height
+        sourceLeft, sourceTop, sourceWidth, sourceHeight,
+        0, 0, sourceWidth, sourceHeight
     );
     
     // Convert to blob and then to data URL

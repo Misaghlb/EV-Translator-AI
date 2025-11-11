@@ -13,6 +13,33 @@ let selectionTimer = null;
 const SELECTION_DELAY = 300; // ms
 let lastSelectedText = ''; // Store the last selected text
 
+// Helper: get current selected text robustly
+function getCurrentSelectedText() {
+    try {
+        const sel = window.getSelection();
+        let text = sel ? sel.toString() : '';
+        text = (text || '').trim();
+        if (text) return text;
+
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) {
+            const start = ae.selectionStart;
+            const end = ae.selectionEnd;
+            if (typeof start === 'number' && typeof end === 'number' && end > start) {
+                const val = ae.value || '';
+                text = val.substring(start, end).trim();
+                if (text) return text;
+            }
+        }
+
+        // Fallback to cached text
+        return (lastSelectedText || '').trim();
+    } catch (e) {
+        console.warn('getCurrentSelectedText error:', e);
+        return (lastSelectedText || '').trim();
+    }
+}
+
 // Store the last position of the translation box
 let lastTranslationBoxPosition = {
     top: null,
@@ -43,6 +70,7 @@ document.addEventListener('mousedown', function(event) {
 });
 
 // Handle mouse up - this is when we'll check for selection
+// Use capture phase to read selection before sites clear it
 document.addEventListener('mouseup', function(event) {
     // Don't process if clicking on the translate button
     if (event.target.id === 'translate-selected-text') {
@@ -53,8 +81,7 @@ document.addEventListener('mouseup', function(event) {
     
     // Wait a moment after mouse up to allow browser to complete selection
     selectionTimer = setTimeout(() => {
-        const selection = window.getSelection();
-        const selectedText = selection.toString().trim();
+        let selectedText = getCurrentSelectedText();
         
         if (selectedText) {
             // Store selected text for later use
@@ -64,6 +91,14 @@ document.addEventListener('mouseup', function(event) {
             showTranslationButton(event, selectedText);
         }
     }, SELECTION_DELAY);
+}, true);
+
+// Cache selected text whenever selection changes in the document
+document.addEventListener('selectionchange', function() {
+    const text = window.getSelection().toString().trim();
+    if (text) {
+        lastSelectedText = text;
+    }
 });
 
 // Function to show the translation button
@@ -1250,7 +1285,14 @@ async function captureSelectedArea(rect) {
     try {
         chrome.runtime.sendMessage({
             action: 'captureVisibleTab',
-            area: rect
+            area: {
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                // Send device pixel ratio to ensure accurate cropping in background
+                scale: window.devicePixelRatio || 1
+            }
         }, async function(response) {
             if (chrome.runtime.lastError) {
                 console.error('Chrome runtime error:', chrome.runtime.lastError);

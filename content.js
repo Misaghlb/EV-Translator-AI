@@ -48,20 +48,20 @@ let lastTranslationBoxPosition = {
 };
 
 // Track mouse down state
-document.addEventListener('mousedown', function(event) {
+document.addEventListener('mousedown', function (event) {
     // Don't remove the button if clicking on it
     if (event.target.id === 'translate-selected-text') {
         return;
     }
-    
+
     isMouseDown = true;
-    
+
     // Clear any existing selection timer
     if (selectionTimer) {
         clearTimeout(selectionTimer);
         selectionTimer = null;
     }
-    
+
     // Remove any existing translate button when starting a new selection
     let translateButton = document.getElementById('translate-selected-text');
     if (translateButton) {
@@ -71,22 +71,22 @@ document.addEventListener('mousedown', function(event) {
 
 // Handle mouse up - this is when we'll check for selection
 // Use capture phase to read selection before sites clear it
-document.addEventListener('mouseup', function(event) {
+document.addEventListener('mouseup', function (event) {
     // Don't process if clicking on the translate button
     if (event.target.id === 'translate-selected-text') {
         return;
     }
-    
+
     isMouseDown = false;
-    
+
     // Wait a moment after mouse up to allow browser to complete selection
     selectionTimer = setTimeout(() => {
         let selectedText = getCurrentSelectedText();
-        
+
         if (selectedText) {
             // Store selected text for later use
             lastSelectedText = selectedText;
-            
+
             // Show the translation button
             showTranslationButton(event, selectedText);
         }
@@ -94,7 +94,7 @@ document.addEventListener('mouseup', function(event) {
 }, true);
 
 // Cache selected text whenever selection changes in the document
-document.addEventListener('selectionchange', function() {
+document.addEventListener('selectionchange', function () {
     const text = window.getSelection().toString().trim();
     if (text) {
         lastSelectedText = text;
@@ -104,13 +104,13 @@ document.addEventListener('selectionchange', function() {
 // Function to show the translation button
 function showTranslationButton(event, selectedText) {
     if (!selectedText) return;
-    
+
     // Remove any existing button first
     let existingButton = document.getElementById('translate-selected-text');
     if (existingButton) {
         existingButton.remove();
     }
-    
+
     // Create a new button
     let translateButton = document.createElement('button');
     translateButton.id = 'translate-selected-text';
@@ -132,23 +132,23 @@ function showTranslationButton(event, selectedText) {
     translateButton.style.border = 'none';
     translateButton.style.borderRadius = '5px';
     translateButton.style.cursor = 'pointer';
-    
+
     // Prevent the button from being removed when clicked
-    translateButton.addEventListener('mousedown', function(e) {
+    translateButton.addEventListener('mousedown', function (e) {
         e.stopPropagation();
     });
-    
-    translateButton.addEventListener('click', function(e) {
+
+    translateButton.addEventListener('click', function (e) {
         e.stopPropagation();
         performSelectionTranslation(selectedText);
         translateButton.remove();
     });
-    
+
     document.body.appendChild(translateButton);
-    
+
     // Add a global click listener to remove the button when clicking elsewhere
     setTimeout(() => {
-        const clickOutsideHandler = function(e) {
+        const clickOutsideHandler = function (e) {
             if (e.target.id !== 'translate-selected-text') {
                 let button = document.getElementById('translate-selected-text');
                 if (button) {
@@ -168,7 +168,7 @@ async function performSelectionTranslation(selectedText) {
         let translation = await translateText(selectedText);
         hideLoadingIndicator();
         if (translation) {
-                displayTranslation(translation, selectedText);
+            displayTranslation(translation, selectedText);
         } else {
             alert('Translation failed.');
         }
@@ -179,7 +179,7 @@ async function performSelectionTranslation(selectedText) {
 function displayTranslation(translation, originalText = null) {
     // Check if there's already a translation box
     const existingBox = document.getElementById('translation-box');
-    
+
     // Create a new floating tooltip-style box or reuse existing one
     let translationBox;
     if (existingBox) {
@@ -191,13 +191,13 @@ function displayTranslation(translation, originalText = null) {
     } else {
         translationBox = getTranslationBoxElement();
     }
-    
+
     // Create a container for the translation text
     const translationText = document.createElement('div');
     // Replace newline characters with <br> tags to preserve paragraph formatting
     const formattedTranslation = translation.replace(/\n/g, '<br>');
     translationText.innerHTML = formattedTranslation;
-    
+
     // Set text direction based on target language (RTL for certain languages)
     chrome.storage.sync.get(['targetLanguage'], ({ targetLanguage }) => {
         const rtlLangs = ['arabic', 'persian', 'farsi', 'urdu', 'hebrew'];
@@ -210,7 +210,7 @@ function displayTranslation(translation, originalText = null) {
             translationText.style.textAlign = 'left';
         }
     });
-    
+
     // Add re-translate button
     const retranslateButton = document.createElement('button');
     retranslateButton.textContent = 'Re-translate';
@@ -223,13 +223,13 @@ function displayTranslation(translation, originalText = null) {
     retranslateButton.style.cursor = 'pointer';
     retranslateButton.style.fontSize = '13px';
     retranslateButton.style.fontFamily = 'Vazirmatn, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-    
+
     // Only enable retranslate button if we have the original text
     if (originalText) {
         retranslateButton.addEventListener('click', async () => {
             retranslateButton.disabled = true;
             retranslateButton.textContent = 'Translating...';
-            
+
             try {
                 // Clear translation cache for this text to get a fresh translation
                 translationCache.delete(originalText);
@@ -252,16 +252,16 @@ function displayTranslation(translation, originalText = null) {
         retranslateButton.style.opacity = '0.5';
         retranslateButton.title = 'Original text not available for retranslation';
     }
-    
+
     // Add close button
     const closeButton = document.createElement('button');
     closeButton.textContent = '×';
     closeButton.className = 'translation-close-btn';
-    
+
     closeButton.addEventListener('click', () => {
         document.body.removeChild(translationBox);
     });
-    
+
     // Add copy button
     const copyButton = document.createElement('button');
     copyButton.textContent = 'Copy';
@@ -275,12 +275,12 @@ function displayTranslation(translation, originalText = null) {
     copyButton.style.cursor = 'pointer';
     copyButton.style.fontSize = '13px';
     copyButton.style.fontFamily = 'Vazirmatn, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-    
+
     copyButton.addEventListener('click', () => {
         // Get all text content from the translation box except for buttons
         let textToCopy = '';
         const walker = document.createTreeWalker(translationBox, NodeFilter.SHOW_TEXT, {
-            acceptNode: function(node) {
+            acceptNode: function (node) {
                 // Exclude text nodes that are children of buttons
                 return (node.parentNode && node.parentNode.tagName === 'BUTTON') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
             }
@@ -290,14 +290,14 @@ function displayTranslation(translation, originalText = null) {
             textToCopy += node.textContent + '\n';
         }
         textToCopy = textToCopy.trim();
-        
+
         // Use the Clipboard API to copy the text
         navigator.clipboard.writeText(textToCopy).then(() => {
             // Provide visual feedback that text was copied
             const originalText = copyButton.textContent;
             copyButton.textContent = 'Copied!';
             copyButton.style.backgroundColor = '#28a745'; // Green color for success
-            
+
             // Reset button after a short delay
             setTimeout(() => {
                 copyButton.textContent = originalText;
@@ -308,37 +308,37 @@ function displayTranslation(translation, originalText = null) {
             alert('Copy error.');
         });
     });
-    
+
     // Create a container for the buttons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'flex';
     buttonContainer.style.justifyContent = 'flex-start';
     buttonContainer.style.width = '100%';
-    
+
     // Add buttons to the container
     buttonContainer.appendChild(retranslateButton);
     buttonContainer.appendChild(copyButton);
-    
+
     // Add elements to the box
     translationBox.appendChild(closeButton);
     translationBox.appendChild(translationText);
     translationBox.appendChild(buttonContainer);
-    
+
     // Add to the page if it's not already there
     if (!document.body.contains(translationBox)) {
         document.body.appendChild(translationBox);
     }
-    
+
     // Get viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // Get box dimensions
     const boxRect = translationBox.getBoundingClientRect();
-    
+
     // Use last position if available, otherwise center the box
     let top, left;
-    
+
     if (lastTranslationBoxPosition.positionSet) {
         // Use the last position
         top = lastTranslationBoxPosition.top;
@@ -348,7 +348,7 @@ function displayTranslation(translation, originalText = null) {
         top = (viewportHeight - boxRect.height) / 2;
         left = (viewportWidth - boxRect.width) / 2;
     }
-    
+
     // Make sure it doesn't go off-screen
     if (left < 10) left = 10;
     if (top < 10) top = 10;
@@ -358,14 +358,14 @@ function displayTranslation(translation, originalText = null) {
     if (top + boxRect.height > viewportHeight - 10) {
         top = viewportHeight - boxRect.height - 10;
     }
-    
+
     // Apply the position
     translationBox.style.top = `${top}px`;
     translationBox.style.left = `${left}px`;
-    
+
     // Make the box draggable and update position when dragged
     makeDraggable(translationBox, true);
-    
+
     // Add event listener to close on Escape key
     const escapeHandler = (e) => {
         if (e.key === 'Escape' && document.body.contains(translationBox)) {
@@ -374,7 +374,7 @@ function displayTranslation(translation, originalText = null) {
         }
     };
     document.addEventListener('keydown', escapeHandler);
-    
+
     // Add event listener to close when clicking outside
     const clickOutsideHandler = (e) => {
         if (!translationBox.contains(e.target)) {
@@ -416,7 +416,7 @@ function addTranslationBoxEventListeners(translationBox) {
             document.body.removeChild(translationBox);
         }
     });
-    
+
     // Close button click
     const closeButton = translationBox.querySelector('button');
     if (closeButton) {
@@ -424,17 +424,17 @@ function addTranslationBoxEventListeners(translationBox) {
             document.body.removeChild(translationBox);
         });
     }
-    
+
     // Click outside to close
     document.addEventListener('click', (e) => {
-        if (translationBox && !translationBox.contains(e.target) && 
+        if (translationBox && !translationBox.contains(e.target) &&
             e.target.id !== 'translate-selected-text') {
             if (document.body.contains(translationBox)) {
                 document.body.removeChild(translationBox);
             }
         }
     });
-    
+
     // Make box draggable
     makeDraggable(translationBox);
 }
@@ -446,10 +446,10 @@ function adjustTranslationBoxPosition(translationBox) {
         width: window.innerWidth,
         height: window.innerHeight
     };
-    
+
     let left = (viewport.width - box.width) / 2;
     let top = (viewport.height - box.height) / 2;
-    
+
     if (left < 20) left = 20;
     if (top < 20) top = 20;
     if (left + box.width > viewport.width - 20) {
@@ -458,7 +458,7 @@ function adjustTranslationBoxPosition(translationBox) {
     if (top + box.height > viewport.height - 20) {
         top = viewport.height - box.height - 20;
     }
-    
+
     Object.assign(translationBox.style, {
         left: `${left}px`,
         top: `${top}px`
@@ -469,9 +469,9 @@ function adjustTranslationBoxPosition(translationBox) {
 function makeDraggable(element, savePosition = false) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     element.style.cursor = 'move';
-    
+
     element.onmousedown = dragMouseDown;
-    
+
     function dragMouseDown(e) {
         if (e.target.tagName.toLowerCase() === 'button') return;
         e.preventDefault();
@@ -480,17 +480,17 @@ function makeDraggable(element, savePosition = false) {
         document.onmouseup = closeDragElement;
         document.onmousemove = elementDrag;
     }
-    
+
     function elementDrag(e) {
         e.preventDefault();
         pos1 = pos3 - e.clientX;
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        
+
         const newTop = element.offsetTop - pos2;
         const newLeft = element.offsetLeft - pos1;
-        
+
         if (newTop >= 0 && newTop <= window.innerHeight - element.offsetHeight) {
             element.style.top = newTop + "px";
         }
@@ -498,11 +498,11 @@ function makeDraggable(element, savePosition = false) {
             element.style.left = newLeft + "px";
         }
     }
-    
+
     function closeDragElement() {
         document.onmouseup = null;
         document.onmousemove = null;
-        
+
         // Save the position for future boxes if requested
         if (savePosition) {
             lastTranslationBoxPosition.top = parseInt(element.style.top);
@@ -667,7 +667,7 @@ async function translateText(text) {
     try {
         // Get API key, prompt, and target language from storage
         const { apiKey, translationPrompt, targetLanguage } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage']);
-        
+
         if (!apiKey) {
             console.error('API key not found. Please set it in the extension settings.');
             return null;
@@ -682,8 +682,8 @@ async function translateText(text) {
         prompt = prompt.replace('<TEXT>', text);
         prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage || 'Persian');
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-        
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
         const payload = {
             contents: [{
                 parts: [{ text: prompt }]
@@ -751,7 +751,7 @@ async function addTranslateButtons() {
 
     // Get the user-selected language to exclude
     const { excludeTweetLang } = await chrome.storage.sync.get(['excludeTweetLang']);
-    
+
     const tweets = Array.from(document.querySelectorAll('article')).map(article => {
         // Build selector: if excludeTweetLang, exclude that lang; otherwise, select all
         let selector = 'div[dir="auto"]';
@@ -775,7 +775,7 @@ async function addTranslateButtons() {
 
         // Try to find the timestamp element to position our button near it
         let timestampEl = tweet.closest('article')?.querySelector('time');
-        
+
         // Create the button with a more button-like appearance
         const button = document.createElement('button');
         button.className = 'translate-button';
@@ -834,21 +834,21 @@ async function addTranslateButtons() {
         button.addEventListener('mouseover', () => {
             button.style.backgroundColor = 'rgba(29, 155, 240, 0.1)';
         });
-        
+
         button.addEventListener('mouseout', () => {
             button.style.backgroundColor = 'transparent';
         });
-        
+
         // Add a data attribute to the tweet
         tweet.dataset.tweetIndex = tweet.dataset.tweetIndex || Math.random().toString(36).substring(2, 9);
 
         button.addEventListener('click', async (event) => {
             event.stopPropagation();
-            
+
             // Find the specific tweet text element to avoid capturing UI elements
             const tweetTextEl = tweet.closest('article').querySelector('[data-testid="tweetText"]');
             let textContent = '';
-            
+
             if (tweetTextEl) {
                 // Use the dedicated tweet text element if found
                 textContent = tweetTextEl.textContent.trim();
@@ -856,19 +856,19 @@ async function addTranslateButtons() {
                 // Fallback to the tweet element but try to avoid capturing UI text
                 textContent = tweet.textContent.trim();
             }
-            
+
             const lang = tweet.getAttribute('lang');
             await performTranslation(tweet, textContent, lang, button);
             // Restore button content after translation completes
             setButtonStyle();
         });
-        
+
         // Add event listeners to prevent event propagation
         button.addEventListener('mousedown', (e) => e.stopPropagation());
         button.addEventListener('mouseup', (e) => e.stopPropagation());
         button.addEventListener('touchstart', (e) => e.stopPropagation());
         button.addEventListener('touchend', (e) => e.stopPropagation());
-        
+
         // Create a container for the button that prevents event bubbling
         const container = document.createElement('div');
         container.style.display = 'inline-flex';
@@ -876,12 +876,12 @@ async function addTranslateButtons() {
         container.style.height = '100%'; // Match height of parent
         container.style.justifyContent = 'center'; // Center horizontally
         container.appendChild(button);
-        
+
         // Stop propagation on the container too
         container.addEventListener('click', (e) => e.stopPropagation());
         container.addEventListener('mousedown', (e) => e.stopPropagation());
         container.addEventListener('mouseup', (e) => e.stopPropagation());
-        
+
         // Insert the button in a suitable location
         if (tweetActionsEl) {
             // Create a wrapper div that matches Twitter's action button containers
@@ -891,10 +891,10 @@ async function addTranslateButtons() {
             actionWrapper.style.alignItems = 'center';
             actionWrapper.style.height = '100%';
             actionWrapper.style.marginRight = '4px';
-            
+
             // Add the container to the wrapper
             actionWrapper.appendChild(container);
-            
+
             // Place with tweet actions to avoid link conflicts
             tweetActionsEl.insertBefore(actionWrapper, tweetActionsEl.firstChild);
         } else {
@@ -905,7 +905,7 @@ async function addTranslateButtons() {
             fallbackContainer.style.justifyContent = 'flex-start';
             fallbackContainer.style.marginTop = '4px';
             fallbackContainer.appendChild(button);
-            
+
             // Find a good place to insert it
             const contentContainer = tweet.closest('article')?.querySelector('[data-testid="tweetText"]') || tweet;
             contentContainer.parentNode.insertBefore(fallbackContainer, contentContainer.nextSibling);
@@ -939,11 +939,11 @@ function debounce(func, wait) {
 
 // Function to check if the current page is a PDF
 function isPdfPage() {
-    return window.location.href.toLowerCase().endsWith('.pdf') || 
-           document.contentType === 'application/pdf' ||
-           document.querySelector('embed[type="application/pdf"]') !== null ||
-           document.querySelector('object[type="application/pdf"]') !== null ||
-           document.querySelector('iframe[src*=".pdf"]') !== null;
+    return window.location.href.toLowerCase().endsWith('.pdf') ||
+        document.contentType === 'application/pdf' ||
+        document.querySelector('embed[type="application/pdf"]') !== null ||
+        document.querySelector('object[type="application/pdf"]') !== null ||
+        document.querySelector('iframe[src*=".pdf"]') !== null;
 }
 
 // Function to add PDF translation button
@@ -951,7 +951,7 @@ function addPdfTranslationButton() {
     // Remove existing button if any
     const existingButton = document.getElementById('pdf-translate-button');
     if (existingButton) existingButton.remove();
-    
+
     // Create the button
     const translateButton = document.createElement('button');
     translateButton.id = 'pdf-translate-button';
@@ -969,16 +969,16 @@ function addPdfTranslationButton() {
     translateButton.style.fontFamily = 'Tahoma, Arial, sans-serif';
     translateButton.style.fontSize = '14px';
     translateButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-    
+
     // Add hover effect
     translateButton.addEventListener('mouseover', () => {
         translateButton.style.backgroundColor = '#13cbe0';
     });
-    
+
     translateButton.addEventListener('mouseout', () => {
         translateButton.style.backgroundColor = '#01afbe';
     });
-    
+
     // Add click event - show menu to choose mode
     // Helper to remove menu and its outside click listener
     function removeMenuAndListener() {
@@ -994,7 +994,7 @@ function addPdfTranslationButton() {
         removeMenuAndListener();
     }
 
-    translateButton.addEventListener('click', function(e) {
+    translateButton.addEventListener('click', function (e) {
         e.stopPropagation();
         const existingMenu = document.getElementById('pdf-translate-menu');
         if (existingMenu) {
@@ -1012,7 +1012,7 @@ function addPdfTranslationButton() {
         menu.style.borderRadius = '6px';
         menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
         // Prevent clicks inside menu from closing it
-        menu.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); }, true);
+        menu.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); }, true);
         // Add menu to DOM
         document.body.appendChild(menu);
         // Delay outside click activation to avoid immediate close
@@ -1045,7 +1045,7 @@ function addPdfTranslationButton() {
         pageOption.style.cursor = 'pointer';
         pageOption.addEventListener('mouseover', () => pageOption.style.background = '#f0f0f0');
         pageOption.addEventListener('mouseout', () => pageOption.style.background = '');
-        pageOption.onclick = function() {
+        pageOption.onclick = function () {
             menu.remove();
             captureAndTranslatePdf();
         };
@@ -1058,7 +1058,7 @@ function addPdfTranslationButton() {
         areaOption.style.cursor = 'pointer';
         areaOption.addEventListener('mouseover', () => areaOption.style.background = '#f0f0f0');
         areaOption.addEventListener('mouseout', () => areaOption.style.background = '');
-        areaOption.onclick = function() {
+        areaOption.onclick = function () {
             menu.remove();
             startAreaSelection();
         };
@@ -1076,7 +1076,7 @@ function addPdfTranslationButton() {
 
         document.body.appendChild(menu);
     });
-    
+
     // Add to the page
     document.body.appendChild(translateButton);
 }
@@ -1112,11 +1112,11 @@ new MutationObserver(() => {
 async function captureAndTranslatePdf() {
     console.log('Starting PDF translation process');
     showLoadingIndicator();
-    
+
     try {
         chrome.runtime.sendMessage({
             action: 'captureVisibleTab'
-        }, async function(response) {
+        }, async function (response) {
             if (response && response.imageDataUrl) {
                 console.log('Screenshot captured, starting translation');
                 const translation = await translateImage(response.imageDataUrl);
@@ -1142,7 +1142,7 @@ async function captureAndTranslatePdf() {
 // Function to start area selection
 function startAreaSelection() {
     console.log('Starting area selection');
-    
+
     // Create overlay
     const overlay = document.createElement('div');
     overlay.id = 'selection-overlay';
@@ -1154,7 +1154,7 @@ function startAreaSelection() {
     overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
     overlay.style.zIndex = '999998';
     overlay.style.cursor = 'crosshair';
-    
+
     // Create selection box
     const selectionBox = document.createElement('div');
     selectionBox.id = 'selection-box';
@@ -1163,7 +1163,7 @@ function startAreaSelection() {
     selectionBox.style.backgroundColor = 'rgba(117, 158, 0, 0.2)';
     selectionBox.style.display = 'none';
     selectionBox.style.zIndex = '999999';
-    
+
     // Create instruction text
     const instruction = document.createElement('div');
     instruction.textContent = 'Select the area you want to translate. To cancel, press the ESC key.';
@@ -1177,81 +1177,81 @@ function startAreaSelection() {
     instruction.style.borderRadius = '5px';
     instruction.style.zIndex = '1000000';
     instruction.style.fontFamily = 'Tahoma, Arial, sans-serif';
-    
+
     // Add elements to page
     document.body.appendChild(overlay);
     document.body.appendChild(selectionBox);
     document.body.appendChild(instruction);
-    
+
     let isSelecting = false;
     let startX = 0;
     let startY = 0;
-    
+
     function cleanup() {
         // Remove event listeners
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('keydown', handleKeyDown);
-        
+
         // Remove elements
         overlay.remove();
         selectionBox.remove();
         instruction.remove();
     }
-    
+
     function handleKeyDown(e) {
         if (e.key === 'Escape') {
             cleanup();
         }
     }
-    
+
     function handleMouseDown(e) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         isSelecting = true;
         startX = e.clientX;
         startY = e.clientY;
-        
+
         selectionBox.style.left = startX + 'px';
         selectionBox.style.top = startY + 'px';
         selectionBox.style.width = '0';
         selectionBox.style.height = '0';
         selectionBox.style.display = 'block';
     }
-    
+
     function handleMouseMove(e) {
         if (!isSelecting) return;
-        
+
         e.preventDefault();
         e.stopPropagation();
-        
+
         const currentX = e.clientX;
         const currentY = e.clientY;
-        
+
         const width = Math.abs(currentX - startX);
         const height = Math.abs(currentY - startY);
-        
+
         const left = Math.min(currentX, startX);
         const top = Math.min(currentY, startY);
-        
+
         selectionBox.style.left = left + 'px';
         selectionBox.style.top = top + 'px';
         selectionBox.style.width = width + 'px';
         selectionBox.style.height = height + 'px';
     }
-    
+
     function handleMouseUp(e) {
         if (!isSelecting) return;
-        
+
         e.preventDefault();
         e.stopPropagation();
-        
+
         isSelecting = false;
-        
+
         const width = parseInt(selectionBox.style.width);
         const height = parseInt(selectionBox.style.height);
-        
+
         if (width >= 10 && height >= 10) {
             const rect = {
                 left: parseInt(selectionBox.style.left),
@@ -1259,20 +1259,20 @@ function startAreaSelection() {
                 width: width,
                 height: height
             };
-            
+
             cleanup();
             captureSelectedArea(rect);
         } else {
             cleanup();
         }
     }
-    
+
     // Add event listeners
     document.addEventListener('keydown', handleKeyDown);
     overlay.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
+
     // Prevent text selection
     overlay.addEventListener('selectstart', e => e.preventDefault());
 }
@@ -1281,7 +1281,7 @@ function startAreaSelection() {
 async function captureSelectedArea(rect) {
     console.log('Capturing selected area:', rect);
     showLoadingIndicator();
-    
+
     try {
         chrome.runtime.sendMessage({
             action: 'captureVisibleTab',
@@ -1293,14 +1293,14 @@ async function captureSelectedArea(rect) {
                 // Send device pixel ratio to ensure accurate cropping in background
                 scale: window.devicePixelRatio || 1
             }
-        }, async function(response) {
+        }, async function (response) {
             if (chrome.runtime.lastError) {
                 console.error('Chrome runtime error:', chrome.runtime.lastError);
                 hideLoadingIndicator();
                 alert('Error capturing image: ' + chrome.runtime.lastError.message);
                 return;
             }
-            
+
             if (response && response.imageDataUrl) {
                 console.log('Area captured, starting translation');
                 const translation = await translateImage(response.imageDataUrl);
@@ -1334,14 +1334,14 @@ async function translateImage(imageDataUrl) {
         alert('Please enter your API Key in the extension settings.');
         return null;
     }
-    
+
     let prompt = translationPrompt || DEFAULT_IMAGE_TRANSLATION_PROMPT;
     prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage);
 
     const base64Image = imageDataUrl.split(',')[1];
-    
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
     try {
         console.log('Sending request to Gemini API');
         const response = await fetch(url, {
@@ -1385,7 +1385,7 @@ async function translateImage(imageDataUrl) {
 function showLoadingIndicator() {
     const existingIndicator = document.getElementById('translation-loading');
     if (existingIndicator) existingIndicator.remove();
-    
+
     const loadingIndicator = document.createElement('div');
     loadingIndicator.id = 'translation-loading';
     loadingIndicator.style.position = 'fixed';
@@ -1399,7 +1399,7 @@ function showLoadingIndicator() {
     loadingIndicator.style.zIndex = '1000000';
     loadingIndicator.style.textAlign = 'center';
     loadingIndicator.style.fontFamily = 'Tahoma, Arial, sans-serif';
-    
+
     const spinner = document.createElement('div');
     spinner.style.border = '4px solid rgba(255, 255, 255, 0.3)';
     spinner.style.borderTop = '4px solid #fff';
@@ -1408,7 +1408,7 @@ function showLoadingIndicator() {
     spinner.style.height = '30px';
     spinner.style.animation = 'spin 1s linear infinite';
     spinner.style.margin = '0 auto 10px auto';
-    
+
     const style = document.createElement('style');
     style.textContent = `
         @keyframes spin {
@@ -1416,12 +1416,12 @@ function showLoadingIndicator() {
             100% { transform: rotate(360deg); }
         }
     `;
-    
+
     document.head.appendChild(style);
-    
+
     const text = document.createElement('div');
     text.textContent = 'Translating...';
-    
+
     loadingIndicator.appendChild(spinner);
     loadingIndicator.appendChild(text);
     document.body.appendChild(loadingIndicator);

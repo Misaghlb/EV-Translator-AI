@@ -1,8 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const modelSelect = document.getElementById('model-select');
+    const customModelInput = document.getElementById('custom-model-input');
+
+    if (modelSelect && customModelInput) {
+        modelSelect.addEventListener('change', () => {
+            if (modelSelect.value === 'custom') {
+                customModelInput.style.display = 'block';
+                customModelInput.focus();
+            } else {
+                customModelInput.style.display = 'none';
+            }
+        });
+    }
+
     // Load saved settings
-    chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage', 'excludeTweetLang'], (result) => {
+    chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage', 'excludeTweetLang', 'selectedModel'], (result) => {
         const savedApiKey = result.apiKey || '';
         const savedLanguage = result.targetLanguage || 'Persian';
+        const savedModel = result.selectedModel || DEFAULT_MODEL;
         let savedPrompt = result.translationPrompt;
         let shouldSave = false;
         if (!savedPrompt || savedPrompt.trim() === "") {
@@ -12,6 +27,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set saved values
         document.getElementById('api-key').value = savedApiKey;
         document.getElementById('translation-prompt').value = savedPrompt;
+        
+        // Set the selected model
+        if (modelSelect) {
+            let matched = false;
+            for (let i = 0; i < modelSelect.options.length; i++) {
+                if (modelSelect.options[i].value === savedModel) {
+                    modelSelect.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched && savedModel) {
+                modelSelect.value = 'custom';
+                if (customModelInput) {
+                    customModelInput.style.display = 'block';
+                    customModelInput.value = savedModel;
+                }
+            }
+        }
+
         // Set the selected language
         const languageSelect = document.getElementById('target-language');
         if (languageSelect) {
@@ -40,11 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetLanguage = document.getElementById('target-language').value;
         const excludeTweetLang = document.getElementById('exclude-lang').value;
         
+        let selectedModel = modelSelect ? modelSelect.value : DEFAULT_MODEL;
+        if (selectedModel === 'custom' && customModelInput) {
+            selectedModel = customModelInput.value.trim() || DEFAULT_MODEL;
+        }
+
         chrome.storage.sync.set({ 
             apiKey,
             translationPrompt,
             targetLanguage,
-            excludeTweetLang
+            excludeTweetLang,
+            selectedModel
         }, () => {
             const status = document.getElementById('status');
             status.style.display = 'block';

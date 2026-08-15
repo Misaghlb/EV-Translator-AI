@@ -665,8 +665,8 @@ async function translateText(text) {
     }
 
     try {
-        // Get API key, prompt, and target language from storage
-        const { apiKey, translationPrompt, targetLanguage } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage']);
+        // Get API key, prompt, target language, and selected model from storage
+        const { apiKey, translationPrompt, targetLanguage, selectedModel } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage', 'selectedModel']);
 
         if (!apiKey) {
             console.error('API key not found. Please set it in the extension settings.');
@@ -682,7 +682,8 @@ async function translateText(text) {
         prompt = prompt.replace('<TEXT>', text);
         prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage || 'Persian');
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const model = selectedModel || (typeof DEFAULT_MODEL !== 'undefined' ? DEFAULT_MODEL : 'gemini-3.1-flash-lite');
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{
@@ -1326,7 +1327,7 @@ async function captureSelectedArea(rect) {
 // Function to translate image using Gemini API
 async function translateImage(imageDataUrl) {
     console.log('Starting image translation');
-    const { apiKey, translationPrompt, targetLanguage } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage']);
+    const { apiKey, translationPrompt, targetLanguage, selectedModel } = await chrome.storage.sync.get(['apiKey', 'translationPrompt', 'targetLanguage', 'selectedModel']);
     const selectedLanguage = targetLanguage || 'Persian';
 
     if (!apiKey) {
@@ -1335,12 +1336,13 @@ async function translateImage(imageDataUrl) {
         return null;
     }
 
-    let prompt = translationPrompt || DEFAULT_IMAGE_TRANSLATION_PROMPT;
-    prompt = prompt.replace(/<LANGUAGE>/g, targetLanguage);
+    let prompt = translationPrompt || (typeof DEFAULT_IMAGE_TRANSLATION_PROMPT !== 'undefined' ? DEFAULT_IMAGE_TRANSLATION_PROMPT : 'Translate image to <LANGUAGE>');
+    prompt = prompt.replace(/<LANGUAGE>/g, selectedLanguage);
 
     const base64Image = imageDataUrl.split(',')[1];
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const model = selectedModel || (typeof DEFAULT_MODEL !== 'undefined' ? DEFAULT_MODEL : 'gemini-3.1-flash-lite');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     try {
         console.log('Sending request to Gemini API');

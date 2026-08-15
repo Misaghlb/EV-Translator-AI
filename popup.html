@@ -153,6 +153,19 @@
         <input type="text" id="api-key" style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
         <p style="font-size: 12px; color: #555; margin-bottom: 15px;"><a href="https://console.cloud.google.com/apis/credentials?createKeyType=API_KEY" target="_blank" rel="noopener">Create your Gemini API Key</a></p>
         
+        <label for="model-select">Gemini Model:</label>
+        <select id="model-select" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Default - Fast)</option>
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Balanced)</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+            <option value="gemini-3.1-pro">Gemini 3.1 Pro (High Accuracy)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option value="custom">Custom Model...</option>
+        </select>
+        <input type="text" id="custom-model-input" placeholder="Enter custom model name (e.g. gemini-3.5-flash)" style="display: none; width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        
         <label for="target-language">Translation Language:</label>
         <select id="target-language" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
             <option value="Persian">Persian</option>
